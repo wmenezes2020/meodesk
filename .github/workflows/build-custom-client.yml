@@ -20,6 +20,7 @@ jobs:
           import json
           import os
           import sys
+          import re
 
           # Lê o arquivo JSON com os dados do servidor
           with open('config.json', 'r', encoding='utf-8') as f:
@@ -30,37 +31,46 @@ jobs:
           
           print(f"Preparando build para o servidor: {ip}")
 
-          target_func = 'pub fn get_option(key: &str) -> String {'
+          # Regex tolerante a espaços, quebras de linha e pequenas variações no tipo da variável
+          pattern = re.compile(r'(pub fn get_option\s*\(\s*key\s*:\s*.*?\)\s*->\s*String\s*\{)')
+          
           config_path = None
           rust_code = ""
+          match_str = ""
 
-          # Busca recursiva em todas as subpastas do projeto
+          # Varredura profunda em TODOS os arquivos .rs do projeto
           for root, dirs, files in os.walk('.'):
-              if 'config.rs' in files:
-                  filepath = os.path.join(root, 'config.rs')
-                  try:
-                      with open(filepath, 'r', encoding='utf-8') as f:
-                          content = f.read()
-                      # Verifica se é o config.rs correto (que gerencia as opções)
-                      if target_func in content:
-                          config_path = filepath
-                          rust_code = content
-                          break
-                  except Exception:
-                      pass
-                      
+              for file in files:
+                  if file.endswith('.rs'):
+                      filepath = os.path.join(root, file)
+                      try:
+                          with open(filepath, 'r', encoding='utf-8') as f:
+                              content = f.read()
+                          
+                          # Tenta encontrar a função no arquivo atual
+                          match = pattern.search(content)
+                          if match:
+                              config_path = filepath
+                              rust_code = content
+                              match_str = match.group(1) # Pega a assinatura exata como está no arquivo
+                              break
+                      except Exception:
+                          pass
+              if config_path:
+                  break
+                  
           if not config_path:
-              print("[ERRO] Arquivo config.rs com a funcao get_option nao encontrado no projeto.")
+              print("[ERRO] A funcao get_option nao foi encontrada em nenhum arquivo .rs.")
               sys.exit(1)
               
-          print(f"[OK] Arquivo config.rs encontrado em: {config_path}")
+          print(f"[OK] Funcao encontrada no arquivo: {config_path}")
 
-          # Injeta o IP e a Chave
+          # Injeta o IP e a Chave logo após a abertura da função
           injection = f"""
               if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
               if key == "key" {{ return "{key}".to_string(); }}
           """
-          rust_code = rust_code.replace(target_func, target_func + injection)
+          rust_code = rust_code.replace(match_str, match_str + injection)
 
           with open(config_path, 'w', encoding='utf-8') as f:
               f.write(rust_code)
@@ -80,10 +90,8 @@ jobs:
       - name: Instalar dependências e compilar (VCPKG & Cargo)
         shell: bash
         run: |
-          # O RustDesk utiliza um script Python próprio para lidar com o vcpkg no Windows
           python build.py
           
-          # Compila o core em Rust
           cargo build --release
 
       - name: Compilar a Interface (Flutter)
