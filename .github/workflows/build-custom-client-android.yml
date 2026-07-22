@@ -16,13 +16,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ler config.json e Injetar Credenciais
+      - name: Ler config.json e Definir Credenciais (Variáveis de Ambiente)
         shell: python
         run: |
           import json
           import os
-          import sys
-          import re
 
           # Lê o arquivo JSON com os dados do servidor
           with open('config.json', 'r', encoding='utf-8') as f:
@@ -31,55 +29,15 @@ jobs:
           ip = config.get('server_ip', '')
           key = config.get('server_key', '')
           
-          print(f"Preparando build para o servidor: {ip}")
+          print(f"Preparando build nativo para o servidor: {ip}")
 
-          # ---------------------------------------------------------
-          # MÉTODO 1: Variáveis de Ambiente (Padrão Oficial Moderno)
-          # ---------------------------------------------------------
+          # Exporta as variáveis de ambiente oficiais do RustDesk para o runner do GitHub
           env_file = os.getenv('GITHUB_ENV')
           if env_file:
               with open(env_file, 'a') as f:
                   f.write(f"RENDEZVOUS_SERVER={ip}\n")
                   f.write(f"RS_PUB_KEY={key}\n")
-              print("[OK] Variaveis de ambiente nativas (RENDEZVOUS_SERVER e RS_PUB_KEY) exportadas para o compilador.")
-
-          # ---------------------------------------------------------
-          # MÉTODO 2: Injeção de Código (Fallback de Segurança)
-          # ---------------------------------------------------------
-          pattern = re.compile(r'(fn\s+(?:get_option|get_value|get|get_str)\s*\(\s*([a-zA-Z0-9_]+)\s*:[^{]*\{)')
-          injected = False
-
-          for root, dirs, files in os.walk('.'):
-              for file in files:
-                  if file in ['config.rs', 'conf.rs', 'settings.rs']:
-                      filepath = os.path.join(root, file)
-                      try:
-                          with open(filepath, 'r', encoding='utf-8') as f:
-                              content = f.read()
-                          
-                          match = pattern.search(content)
-                          if match:
-                              full_match = match.group(1)
-                              param = match.group(2)
-                              
-                              injection = f"""
-                                    let _k = {param}.as_ref();
-                                    if _k == "custom-rendezvous-server" || _k == "rendezvous_server" {{ return "{ip}".to_string(); }}
-                                    if _k == "key" || _k == "rs_pub_key" {{ return "{key}".to_string(); }}
-                                """
-                              content = content.replace(full_match, full_match + injection)
-                              with open(filepath, 'w', encoding='utf-8') as f:
-                                  f.write(content)
-                              print(f"[OK] Injetado via codigo com sucesso no arquivo: {filepath}")
-                              injected = True
-                              break
-                      except Exception:
-                          pass
-              if injected:
-                  break
-
-          if not injected:
-              print("[AVISO] Injeção via codigo ignorada. O build continuara de forma segura usando apenas as Variaveis de Ambiente.")
+              print("[OK] Variaveis de ambiente injetadas com sucesso!")
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -98,31 +56,30 @@ jobs:
         with:
           targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
 
-      - name: Setup Ferramentas Cargo (cargo-ndk e cargo-bundle)
-        run: |
-          cargo install cargo-ndk
-          cargo install cargo-bundle
+      - name: Instalar Ferramentas Cargo (cargo-ndk)
+        run: cargo install cargo-ndk
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Instalar dependências C++ do SO
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build cmake curl wget unzip zip
-          python build.py
-
-      - name: Compilar a Interface (Flutter) e Core (Rust)
+      - name: Compilar o Core Rust e o App Android via Flutter
         shell: bash
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
+          # O script interno do flutter do RustDesk já gerencia a compilação cruzada do NDK corretamente
           cd flutter
           flutter pub get
-          flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+          
+          # Se o seu fork possuir o script de compilação NDK integrado, executamos ele; caso contrário, construímos direto pelo Flutter
+          if [ -f "ndk_arm64.sh" ]; then
+            chmod +x ndk_arm64.sh
+            ./ndk_arm64.sh
+          fi
+          
+          flutter build apk --release --target-platform android-arm,android-arm64
 
       - name: Empacotar e Disponibilizar o Arquivo .apk
         uses: actions/upload-artifact@v4
