@@ -1,4 +1,4 @@
-name: Build Custom RustDesk Client ( Windows )
+name: Build Custom MeoDesk Client (Windows)
 
 on:
   push:
