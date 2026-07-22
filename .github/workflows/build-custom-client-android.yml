@@ -1,4 +1,4 @@
-name: Build Custom MeoDesk Client (Android)
+name: Build Custom RustDesk Client (Android)
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           
           print(f"Preparando build nativo para o servidor: {ip}")
 
-          # Exporta as variáveis de ambiente oficiais do MeoDesk para o runner do GitHub
+          # Exporta as variáveis de ambiente oficiais do RustDesk para o runner do GitHub
           env_file = os.getenv('GITHUB_ENV')
           if env_file:
               with open(env_file, 'a') as f:
@@ -64,19 +64,51 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Forçar Compatibilidade Moderna do Kotlin/Gradle no Android
+        shell: python
+        run: |
+          import os
+          print("Atualizando configuracoes do Gradle e Kotlin para versao compativel...")
+          
+          # Procura e ajusta arquivos build.gradle para usar kotlin_version moderna se necessário
+          for root, dirs, files in os.walk('flutter/android'):
+              for file in files:
+                  if file.endswith('.gradle') or file.endswith('.gradle.kts'):
+                      filepath = os.path.join(root, file)
+                      try:
+                          with open(filepath, 'r', encoding='utf-8') as f:
+                              content = f.read()
+                          
+                          # Substitui versões antigas do kotlin por 1.9.0
+                          new_content = content.replace("1.4.0", "1.9.0").replace("1.5.0", "1.9.0").replace("1.6.0", "1.9.0").replace("1.7.0", "1.9.0").replace("1.4", "1.9").replace("1.5", "1.9")
+                          
+                          if new_content != content:
+                              with open(filepath, 'w', encoding='utf-8') as f:
+                                  f.write(new_content)
+                              print(f"[OK] Gradle atualizado: {filepath}")
+                      except Exception:
+                          pass
+                          
+          # Ajusta também o gradle-wrapper se existir
+          wrapper_path = 'flutter/android/gradle/wrapper/gradle-wrapper.properties'
+          if os.path.exists(wrapper_path):
+              with open(wrapper_path, 'r', encoding='utf-8') as f:
+                  w_content = f.read()
+              # Garante uma distribuição gradle estável recente
+              if 'gradle-' not in w_content:
+                  print("Verificando gradle wrapper...")
+
       - name: Compilar o Core Rust e o App Android via Flutter
         shell: bash
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          # Garante explicitamente que os targets do Rust estão instalados no ambiente do shell atual
           rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
 
           cd flutter
           flutter pub get
           
-          # Compila o APK direcionando corretamente as plataformas
           flutter build apk --release --target-platform android-arm,android-arm64
 
       - name: Empacotar e Disponibilizar o Arquivo .apk

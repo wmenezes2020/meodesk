@@ -1,4 +1,4 @@
-name: Build Custom Rus  tDesk Client ( Windows )
+name: Build Custom RustDesk Client
 
 on:
   push:
@@ -52,11 +52,11 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Instalar dependências e compilar (VCPKG & Cargo)
+      - name: Configurar VCPKG, Dependências e Compilar o Core (via build.py)
         shell: bash
         run: |
-          python build.py
-          cargo build --release
+          # O build.py cuida de baixar o vcpkg, compilar as libs C++ e chamar o cargo build com as flags corretas
+          python build.py --release
 
       - name: Compilar a Interface (Flutter)
         shell: bash
