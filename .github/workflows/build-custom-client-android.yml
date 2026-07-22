@@ -64,13 +64,12 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Forçar Compatibilidade Moderna do Kotlin/Gradle no Android
+      - name: Normalizar Versões do Kotlin e Gradle Globalmente
         shell: python
         run: |
           import os
-          print("Atualizando configuracoes do Gradle e Kotlin para versao compativel...")
           
-          # Procura e ajusta arquivos build.gradle para usar kotlin_version moderna se necessário
+          # Garante compatibilidade forçando a versão do Kotlin em todos os build.gradle do projeto Flutter
           for root, dirs, files in os.walk('flutter/android'):
               for file in files:
                   if file.endswith('.gradle') or file.endswith('.gradle.kts'):
@@ -79,24 +78,24 @@ jobs:
                           with open(filepath, 'r', encoding='utf-8') as f:
                               content = f.read()
                           
-                          # Substitui versões antigas do kotlin por 1.9.0
-                          new_content = content.replace("1.4.0", "1.9.0").replace("1.5.0", "1.9.0").replace("1.6.0", "1.9.0").replace("1.7.0", "1.9.0").replace("1.4", "1.9").replace("1.5", "1.9")
+                          # Substitui referências antigas de kotlin_version ou versão direta
+                          new_content = content.replace("ext.kotlin_version = '1.4", "ext.kotlin_version = '1.8")
+                          new_content = new_content.replace('ext.kotlin_version = "1.4', 'ext.kotlin_version = "1.8')
+                          new_content = new_content.replace("ext.kotlin_version = '1.5", "ext.kotlin_version = '1.8")
+                          new_content = new_content.replace('ext.kotlin_version = "1.5', 'ext.kotlin_version = "1.8')
+                          new_content = new_content.replace("ext.kotlin_version = '1.6", "ext.kotlin_version = '1.8")
+                          new_content = new_content.replace('ext.kotlin_version = "1.6', 'ext.kotlin_version = "1.8')
                           
+                          # Adiciona compatibilidade de JVM target se for o build.gradle principal
+                          if file == 'build.gradle' and 'subprojects {' not in new_content:
+                              new_content += "\nallprojects { tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { jvmTarget = '1.8' } } }\n"
+
                           if new_content != content:
                               with open(filepath, 'w', encoding='utf-8') as f:
                                   f.write(new_content)
-                              print(f"[OK] Gradle atualizado: {filepath}")
+                              print(f"[OK] Normalizado: {filepath}")
                       except Exception:
                           pass
-                          
-          # Ajusta também o gradle-wrapper se existir
-          wrapper_path = 'flutter/android/gradle/wrapper/gradle-wrapper.properties'
-          if os.path.exists(wrapper_path):
-              with open(wrapper_path, 'r', encoding='utf-8') as f:
-                  w_content = f.read()
-              # Garante uma distribuição gradle estável recente
-              if 'gradle-' not in w_content:
-                  print("Verificando gradle wrapper...")
 
       - name: Compilar o Core Rust e o App Android via Flutter
         shell: bash
