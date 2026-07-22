@@ -11,8 +11,10 @@ jobs:
     runs-on: windows-latest
     
     steps:
-      - name: Checkout do Código
+      - name: Checkout do Código com Submódulos
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Ler config.json e Injetar Credenciais
         shell: python
@@ -44,13 +46,11 @@ jobs:
           # ---------------------------------------------------------
           # MÉTODO 2: Injeção de Código (Fallback de Segurança)
           # ---------------------------------------------------------
-          # Regex procura por variações de funções de resgate de config
           pattern = re.compile(r'(fn\s+(?:get_option|get_value|get|get_str)\s*\(\s*([a-zA-Z0-9_]+)\s*:[^{]*\{)')
           injected = False
 
           for root, dirs, files in os.walk('.'):
               for file in files:
-                  # Limita a busca a arquivos de configuração para evitar falsos positivos
                   if file in ['config.rs', 'conf.rs', 'settings.rs']:
                       filepath = os.path.join(root, file)
                       try:
@@ -60,7 +60,7 @@ jobs:
                           match = pattern.search(content)
                           if match:
                               full_match = match.group(1)
-                              param = match.group(2) # Nome do parametro (geralmente 'key' ou 'k')
+                              param = match.group(2)
                               
                               injection = f"""
                                     let _k = {param}.as_ref();
