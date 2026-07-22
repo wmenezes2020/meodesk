@@ -31,7 +31,7 @@ jobs:
           
           print(f"Preparando build nativo para o servidor: {ip}")
 
-          # Exporta as variáveis de ambiente oficiais do RustDesk para o runner do GitHub
+          # Exporta as variáveis de ambiente oficiais do MeoDesk para o runner do GitHub
           env_file = os.getenv('GITHUB_ENV')
           if env_file:
               with open(env_file, 'a') as f:
@@ -68,17 +68,15 @@ jobs:
         shell: bash
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          # O script interno do flutter do RustDesk já gerencia a compilação cruzada do NDK corretamente
+          # Garante explicitamente que os targets do Rust estão instalados no ambiente do shell atual
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+
           cd flutter
           flutter pub get
           
-          # Se o seu fork possuir o script de compilação NDK integrado, executamos ele; caso contrário, construímos direto pelo Flutter
-          if [ -f "ndk_arm64.sh" ]; then
-            chmod +x ndk_arm64.sh
-            ./ndk_arm64.sh
-          fi
-          
+          # Compila o APK direcionando corretamente as plataformas
           flutter build apk --release --target-platform android-arm,android-arm64
 
       - name: Empacotar e Disponibilizar o Arquivo .apk
