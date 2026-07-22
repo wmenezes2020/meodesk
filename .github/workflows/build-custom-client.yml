@@ -1,4 +1,4 @@
-name: Build Custom RustDesk Client
+name: Build Custom RustDesk Client ( Windows )
 
 on:
   push:
@@ -30,42 +30,42 @@ jobs:
           
           print(f"Preparando build para o servidor: {ip}")
 
-          # Lista de possíveis caminhos devido às refatorações do repositório
-          possible_paths = [
-              'libs/hbb_common/src/config.rs',
-              'common/src/config.rs',
-              'src/config.rs'
-          ]
-          
+          target_func = 'pub fn get_option(key: &str) -> String {'
           config_path = None
-          for path in possible_paths:
-              if os.path.exists(path):
-                  config_path = path
-                  break
-                  
+          rust_code = ""
+
+          # Busca recursiva em todas as subpastas do projeto
+          for root, dirs, files in os.walk('.'):
+              if 'config.rs' in files:
+                  filepath = os.path.join(root, 'config.rs')
+                  try:
+                      with open(filepath, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                      # Verifica se é o config.rs correto (que gerencia as opções)
+                      if target_func in content:
+                          config_path = filepath
+                          rust_code = content
+                          break
+                  except Exception:
+                      pass
+                      
           if not config_path:
-              print("❌ Erro: Arquivo config.rs não encontrado na raiz do projeto.")
+              print("[ERRO] Arquivo config.rs com a funcao get_option nao encontrado no projeto.")
               sys.exit(1)
               
-          print(f"✅ Arquivo config.rs encontrado em: {config_path}")
+          print(f"[OK] Arquivo config.rs encontrado em: {config_path}")
 
-          with open(config_path, 'r', encoding='utf-8') as f:
-              rust_code = f.read()
-          
-          # Injeta o IP e a Chave interceptando a função get_option do RustDesk
-          target_func = "pub fn get_option(key: &str) -> String {"
+          # Injeta o IP e a Chave
           injection = f"""
               if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
               if key == "key" {{ return "{key}".to_string(); }}
           """
-          if target_func in rust_code:
-              rust_code = rust_code.replace(target_func, target_func + injection)
-              with open(config_path, 'w', encoding='utf-8') as f:
-                  f.write(rust_code)
-              print("✅ IP e Chave injetados com sucesso no Rust!")
-          else:
-              print("❌ Aviso: A estrutura do config.rs mudou e a injeção falhou.")
-              sys.exit(1)
+          rust_code = rust_code.replace(target_func, target_func + injection)
+
+          with open(config_path, 'w', encoding='utf-8') as f:
+              f.write(rust_code)
+              
+          print("[OK] IP e Chave injetados com sucesso no Rust!")
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -80,8 +80,10 @@ jobs:
       - name: Instalar dependências e compilar (VCPKG & Cargo)
         shell: bash
         run: |
+          # O RustDesk utiliza um script Python próprio para lidar com o vcpkg no Windows
           python build.py
           
+          # Compila o core em Rust
           cargo build --release
 
       - name: Compilar a Interface (Flutter)
