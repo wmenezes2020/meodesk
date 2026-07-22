@@ -19,6 +19,7 @@ jobs:
         run: |
           import json
           import os
+          import sys
 
           # Lê o arquivo JSON com os dados do servidor
           with open('config.json', 'r', encoding='utf-8') as f:
@@ -29,8 +30,25 @@ jobs:
           
           print(f"Preparando build para o servidor: {ip}")
 
-          # Modificar o backend em Rust (libs/hbb_common/src/config.rs)
-          config_path = 'libs/hbb_common/src/config.rs'
+          # Lista de possíveis caminhos devido às refatorações do repositório
+          possible_paths = [
+              'libs/hbb_common/src/config.rs',
+              'common/src/config.rs',
+              'src/config.rs'
+          ]
+          
+          config_path = None
+          for path in possible_paths:
+              if os.path.exists(path):
+                  config_path = path
+                  break
+                  
+          if not config_path:
+              print("❌ Erro: Arquivo config.rs não encontrado na raiz do projeto.")
+              sys.exit(1)
+              
+          print(f"✅ Arquivo config.rs encontrado em: {config_path}")
+
           with open(config_path, 'r', encoding='utf-8') as f:
               rust_code = f.read()
           
@@ -46,7 +64,8 @@ jobs:
                   f.write(rust_code)
               print("✅ IP e Chave injetados com sucesso no Rust!")
           else:
-              print("❌ Aviso: A estrutura do config.rs mudou na versão atual do fork.")
+              print("❌ Aviso: A estrutura do config.rs mudou e a injeção falhou.")
+              sys.exit(1)
 
       - name: Setup Java
         uses: actions/setup-java@v3
