@@ -1,4 +1,4 @@
-name: Build Custom MeoDesk Client (Windows)
+name: Build Custom MeoDesk Client ( Windows )
 
 on:
   push:
@@ -85,6 +85,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+
+      - name: Instalar Ferramentas Cargo (cargo-bundle)
+        run: cargo install cargo-bundle
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
