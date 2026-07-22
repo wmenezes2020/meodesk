@@ -14,7 +14,7 @@ jobs:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
-      - name: Ler config.json e Injetar Credenciais no Código
+      - name: Ler config.json e Injetar Credenciais
         shell: python
         run: |
           import json
@@ -31,51 +31,55 @@ jobs:
           
           print(f"Preparando build para o servidor: {ip}")
 
-          # Regex tolerante a espaços, quebras de linha e pequenas variações no tipo da variável
-          pattern = re.compile(r'(pub fn get_option\s*\(\s*key\s*:\s*.*?\)\s*->\s*String\s*\{)')
-          
-          config_path = None
-          rust_code = ""
-          match_str = ""
+          # ---------------------------------------------------------
+          # MÉTODO 1: Variáveis de Ambiente (Padrão Oficial Moderno)
+          # ---------------------------------------------------------
+          env_file = os.getenv('GITHUB_ENV')
+          if env_file:
+              with open(env_file, 'a') as f:
+                  f.write(f"RENDEZVOUS_SERVER={ip}\n")
+                  f.write(f"RS_PUB_KEY={key}\n")
+              print("[OK] Variaveis de ambiente nativas (RENDEZVOUS_SERVER e RS_PUB_KEY) exportadas para o compilador.")
 
-          # Varredura profunda em TODOS os arquivos .rs do projeto
+          # ---------------------------------------------------------
+          # MÉTODO 2: Injeção de Código (Fallback de Segurança)
+          # ---------------------------------------------------------
+          # Regex procura por variações de funções de resgate de config
+          pattern = re.compile(r'(fn\s+(?:get_option|get_value|get|get_str)\s*\(\s*([a-zA-Z0-9_]+)\s*:[^{]*\{)')
+          injected = False
+
           for root, dirs, files in os.walk('.'):
               for file in files:
-                  if file.endswith('.rs'):
+                  # Limita a busca a arquivos de configuração para evitar falsos positivos
+                  if file in ['config.rs', 'conf.rs', 'settings.rs']:
                       filepath = os.path.join(root, file)
                       try:
                           with open(filepath, 'r', encoding='utf-8') as f:
                               content = f.read()
                           
-                          # Tenta encontrar a função no arquivo atual
                           match = pattern.search(content)
                           if match:
-                              config_path = filepath
-                              rust_code = content
-                              match_str = match.group(1) # Pega a assinatura exata como está no arquivo
+                              full_match = match.group(1)
+                              param = match.group(2) # Nome do parametro (geralmente 'key' ou 'k')
+                              
+                              injection = f"""
+                                    let _k = {param}.as_ref();
+                                    if _k == "custom-rendezvous-server" || _k == "rendezvous_server" {{ return "{ip}".to_string(); }}
+                                    if _k == "key" || _k == "rs_pub_key" {{ return "{key}".to_string(); }}
+                                """
+                              content = content.replace(full_match, full_match + injection)
+                              with open(filepath, 'w', encoding='utf-8') as f:
+                                  f.write(content)
+                              print(f"[OK] Injetado via codigo com sucesso no arquivo: {filepath}")
+                              injected = True
                               break
                       except Exception:
                           pass
-              if config_path:
+              if injected:
                   break
-                  
-          if not config_path:
-              print("[ERRO] A funcao get_option nao foi encontrada em nenhum arquivo .rs.")
-              sys.exit(1)
-              
-          print(f"[OK] Funcao encontrada no arquivo: {config_path}")
 
-          # Injeta o IP e a Chave logo após a abertura da função
-          injection = f"""
-              if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
-              if key == "key" {{ return "{key}".to_string(); }}
-          """
-          rust_code = rust_code.replace(match_str, match_str + injection)
-
-          with open(config_path, 'w', encoding='utf-8') as f:
-              f.write(rust_code)
-              
-          print("[OK] IP e Chave injetados com sucesso no Rust!")
+          if not injected:
+              print("[AVISO] Injeção via codigo ignorada. O build continuara de forma segura usando apenas as Variaveis de Ambiente.")
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -91,7 +95,6 @@ jobs:
         shell: bash
         run: |
           python build.py
-          
           cargo build --release
 
       - name: Compilar a Interface (Flutter)
