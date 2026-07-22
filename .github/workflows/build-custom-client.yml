@@ -37,9 +37,9 @@ jobs:
           # Injeta o IP e a Chave interceptando a função get_option do RustDesk
           target_func = "pub fn get_option(key: &str) -> String {"
           injection = f"""
-    if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
-    if key == "key" {{ return "{key}".to_string(); }}
-"""
+            if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
+            if key == "key" {{ return "{key}".to_string(); }}
+          """
           if target_func in rust_code:
               rust_code = rust_code.replace(target_func, target_func + injection)
               with open(config_path, 'w', encoding='utf-8') as f:
@@ -61,10 +61,8 @@ jobs:
       - name: Instalar dependências e compilar (VCPKG & Cargo)
         shell: bash
         run: |
-          # O RustDesk utiliza um script Python próprio para lidar com o vcpkg no Windows
           python build.py
           
-          # Compila o core em Rust
           cargo build --release
 
       - name: Compilar a Interface (Flutter)
@@ -78,6 +76,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MeoDesk-Windows
-          # O build final do Flutter no Windows fica neste diretório:
           path: flutter/build/windows/runner/Release/
           retention-days: 7
