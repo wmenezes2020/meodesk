@@ -1,0 +1,97 @@
+name: Build Custom RustDesk Client (Android)
+
+on:
+  push:
+    branches:
+      - build-custom
+
+jobs:
+  build-android:
+    name: Build Android Client
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Ler config.json e Injetar Credenciais no Código
+        shell: python
+        run: |
+          import json
+          import os
+
+          # Lê o arquivo JSON com os dados do servidor
+          with open('config.json', 'r', encoding='utf-8') as f:
+              config = json.load(f)
+          
+          ip = config.get('server_ip', '')
+          key = config.get('server_key', '')
+          
+          print(f"Preparando build para o servidor: {ip}")
+
+          # Modificar o backend em Rust (libs/hbb_common/src/config.rs)
+          config_path = 'libs/hbb_common/src/config.rs'
+          with open(config_path, 'r', encoding='utf-8') as f:
+              rust_code = f.read()
+          
+          # Injeta o IP e a Chave interceptando a função get_option
+          target_func = "pub fn get_option(key: &str) -> String {"
+          injection = f"""
+              if key == "custom-rendezvous-server" {{ return "{ip}".to_string(); }}
+              if key == "key" {{ return "{key}".to_string(); }}
+          """
+          if target_func in rust_code:
+              rust_code = rust_code.replace(target_func, target_func + injection)
+              with open(config_path, 'w', encoding='utf-8') as f:
+                  f.write(rust_code)
+              print("✅ IP e Chave injetados com sucesso no Rust!")
+          else:
+              print("❌ Aviso: A estrutura do config.rs mudou na versão atual do fork.")
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+
+      - name: Setup Rust para Android
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+      - name: Setup cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Instalar dependências C++ do SO
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake curl wget unzip zip
+          python build.py
+
+      - name: Compilar a Interface (Flutter) e Core (Rust)
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          cd flutter
+          flutter pub get
+          flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+
+      - name: Empacotar e Disponibilizar o Arquivo .apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeoDesk-Android
+          path: flutter/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
