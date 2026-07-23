@@ -69,7 +69,12 @@ jobs:
           flutter precache --windows
           Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
           Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
-          mv -Force windows-x64-release/* C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+          $flutter_path = (Get-Command flutter).Source
+          $flutter_dir = Split-Path -Path (Split-Path -Path $flutter_path -Parent) -Parent
+          $engine_dir = "$flutter_dir\bin\cache\artifacts\engine\windows-x64-release"
+          Write-Host "Moving engine to $engine_dir"
+          mkdir -Force $engine_dir
+          mv -Force windows-x64-release/* $engine_dir/
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
