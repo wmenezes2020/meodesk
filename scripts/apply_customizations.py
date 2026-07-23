@@ -45,18 +45,36 @@ def main():
             content
         )
 
-        # Replace OVERWRITE_SETTINGS to hide server settings
+        # Replace OVERWRITE_SETTINGS to hide server settings and enforce credentials
         old_overwrite = r'pub static ref OVERWRITE_SETTINGS:\s*RwLock<HashMap<String,\s*String>>\s*=\s*Default::default\(\);'
-        new_overwrite = """pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = {
+        new_overwrite = f"""pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = {{
         let mut map = std::collections::HashMap::new();
         map.insert("hide-server-settings".to_string(), "Y".to_string());
+        map.insert("custom-rendezvous-server".to_string(), "{server_ip}".to_string());
+        map.insert("key".to_string(), "{server_key}".to_string());
         std::sync::RwLock::new(map)
-    };"""
+    }};"""
         content = re.sub(old_overwrite, new_overwrite, content)
 
         with open(config_rs_path, 'w', encoding='utf-8') as f:
             f.write(content)
         print("Updated libs/hbb_common/src/config.rs")
+
+    # 1.5 Modify AndroidManifest.xml
+    android_manifest_path = 'flutter/android/app/src/main/AndroidManifest.xml'
+    if os.path.exists(android_manifest_path):
+        with open(android_manifest_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        content = re.sub(
+            r'android:label="RustDesk"',
+            f'android:label="{app_name}"',
+            content
+        )
+
+        with open(android_manifest_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Updated flutter/android/app/src/main/AndroidManifest.xml")
 
     # 2. Modify flutter/android/app/src/main/res/values/strings.xml
     android_strings_path = 'flutter/android/app/src/main/res/values/strings.xml'
