@@ -1,0 +1,107 @@
+name: Build Custom MeoDesk Client (Android)
+
+on:
+  push:
+    branches:
+      - build-custom
+
+jobs:
+  build-android:
+    name: Build Android Client
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout do Código com Submódulos
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Ler config.json e Definir Credenciais (Variáveis de Ambiente)
+        shell: python
+        run: |
+          import json
+          import os
+
+          with open('config.json', 'r', encoding='utf-8') as f:
+              config = json.load(f)
+          
+          ip = config.get('server_ip', '')
+          key = config.get('server_key', '')
+          
+          print(f"Preparando build nativo para o servidor: {ip}")
+
+          env_file = os.getenv('GITHUB_ENV')
+          if env_file:
+              with open(env_file, 'a') as f:
+                  f.write(f"RENDEZVOUS_SERVER={ip}\n")
+                  f.write(f"RS_PUB_KEY={key}\n")
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+
+      - name: Setup Rust para Android
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+      - name: Instalar Ferramentas Cargo (cargo-ndk)
+        run: cargo install cargo-ndk
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Interceptação Global do Gradle (Hook de CI/CD)
+        shell: bash
+        run: |
+          # Cria a infraestrutura global do Gradle na máquina do GitHub Actions
+          mkdir -p ~/.gradle/init.d
+          
+          # 1. Injeta propriedades fixas de forma global
+          echo "kotlin.version=1.9.24" >> ~/.gradle/gradle.properties
+          echo "ext.kotlin_version=1.9.24" >> ~/.gradle/gradle.properties
+          
+          # 2. Cria o script de interceptação (Init Script)
+          # Isso roda antes do Flutter e de qualquer avaliação de projeto.
+          # Sempre que uma classe de compilação Kotlin for instanciada, sobreescrevemos a versão do SDK em memória.
+          cat << 'EOF' > ~/.gradle/init.d/force-kotlin.gradle
+          gradle.allprojects { project ->
+              project.afterEvaluate {
+                  project.tasks.configureEach { task ->
+                      if (task.getClass().getName().contains("KotlinCompile")) {
+                          task.kotlinOptions.jvmTarget = "1.8"
+                          task.kotlinOptions.languageVersion = "1.9"
+                          task.kotlinOptions.apiVersion = "1.9"
+                      }
+                  }
+              }
+          }
+          EOF
+          echo "[OK] Middleware do Gradle configurado. Compilação blindada."
+
+      - name: Compilar o Core Rust e o App Android via Flutter
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          cd flutter
+          flutter pub get
+          flutter build apk --release --target-platform android-arm,android-arm64
+
+      - name: Empacotar e Disponibilizar o Arquivo .apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: MeoDesk-Android
+          path: flutter/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7

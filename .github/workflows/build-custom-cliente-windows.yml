@@ -16,7 +16,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Ler config.json e Definir Credenciais (Variáveis de Ambiente)
+      - name: Ler config.json e Definir Credenciais
         shell: python
         run: |
           import json
@@ -41,33 +41,30 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Instalar Ferramentas Auxiliares (NASM e cargo-bundle)
-        run: |
-          choco install nasm -y
-          cargo install cargo-bundle
+      - name: Instalar NASM e YASM (Essenciais para os codecs de vídeo)
+        run: choco install nasm yasm -y
 
-      - name: Preparação e Downgrade do VCPKG (Correção Definitiva do AOM/libvpx)
+      - name: Setup VCPKG Atualizado (Resolve JSON + Erro do AOM)
         shell: bash
         run: |
-          # Clona a versão homologada do vcpkg e ignora a versão quebrada do GitHub Actions
-          git clone https://github.com/microsoft/vcpkg.git vcpkg-custom
-          cd vcpkg-custom
-          git checkout 2023.04.15
-          ./bootstrap-vcpkg.sh
-          cd ..
+          # Navega até a instalação padrão do vcpkg no GitHub Actions
+          cd $VCPKG_INSTALLATION_ROOT
           
-          # Aponta o ambiente de compilação para usar nossa versão segura
-          export VCPKG_ROOT="$PWD/vcpkg-custom"
-          echo "VCPKG_ROOT=$VCPKG_ROOT" >> $GITHUB_ENV
+          # Puxa as atualizações de hoje da Microsoft, forçando a versão mais recente
+          git fetch --all
+          git reset --hard origin/master
+          ./bootstrap-vcpkg.sh
+          
+          # Injeta as variáveis de ambiente necessárias para o compilador do Rust
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
           echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $GITHUB_ENV
           
-          # Instala as dependências lendo o vcpkg.json do projeto (sem conflitos)
-          $VCPKG_ROOT/vcpkg install --triplet=x64-windows-static
+          # Executa a instalação lendo o vcpkg.json perfeitamente
+          ./vcpkg install --triplet=x64-windows-static
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Mantemos na versão mais estável para o código Flutter
           channel: 'stable'
 
       - name: Compilar o Core Backend (Rust)
