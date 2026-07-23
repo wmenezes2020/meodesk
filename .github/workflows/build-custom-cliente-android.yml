@@ -142,11 +142,6 @@ jobs:
             exit 1
           fi
 
-      - name: Install Android Platform SDK 34
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-34"
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
