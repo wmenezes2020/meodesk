@@ -1,4 +1,4 @@
-name: Build Custom MeoDesk Client ( Windows )
+name: Build Custom MeoDesk Client (Windows)
 
 on:
   push:
@@ -31,32 +31,42 @@ jobs:
           
           print(f"Preparando build nativo para o servidor: {ip}")
 
-          # Exporta as variáveis de ambiente oficiais do RustDesk para o runner do GitHub
           env_file = os.getenv('GITHUB_ENV')
           if env_file:
               with open(env_file, 'a') as f:
                   f.write(f"RENDEZVOUS_SERVER={ip}\n")
                   f.write(f"RS_PUB_KEY={key}\n")
-              print("[OK] Variaveis de ambiente injetadas com sucesso!")
+              print("[OK] Variaveis injetadas com sucesso!")
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Instalar Ferramentas Cargo (cargo-bundle)
-        run: cargo install cargo-bundle
+      - name: Instalar NASM (Essencial para compilar o libvpx)
+        run: choco install nasm -y
+
+      - name: Configurar VCPKG e Bibliotecas C++ (Codecs de Vídeo)
+        shell: bash
+        run: |
+          # O runner do GitHub (windows-latest) já possui o vcpkg instalado nesta variável
+          export VCPKG_ROOT="$VCPKG_INSTALLATION_ROOT"
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+          
+          # Instalação manual e estrita das dependências exigidas pelo RustDesk
+          $VCPKG_INSTALLATION_ROOT/vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.19.0' 
           channel: 'stable'
 
-      - name: Configurar VCPKG e Compilar o Core (via build.py)
+      - name: Compilar o Core Backend (Rust)
         shell: bash
         run: |
-          # Executa o script nativo de build do RustDesk sem argumentos inválidos
-          python build.py
+          # Ignoramos o build.py instável e rodamos direto o compilador com as variáveis setadas
+          cargo build --release
 
       - name: Compilar a Interface (Flutter)
         shell: bash
