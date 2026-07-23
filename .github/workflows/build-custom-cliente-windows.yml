@@ -41,26 +41,30 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Instalar NASM e YASM (Essenciais para os codecs de vídeo)
+      - name: Instalar NASM e YASM (Codecs de Vídeo)
         run: choco install nasm yasm -y
 
-      - name: Setup VCPKG Atualizado (Resolve JSON + Erro do AOM)
+      - name: Setup VCPKG Atualizado e Instalação (Manifest Mode)
         shell: bash
         run: |
-          # Navega até a instalação padrão do vcpkg no GitHub Actions
-          cd $VCPKG_INSTALLATION_ROOT
+          # 1. Guarda o diretório do projeto (onde está o vcpkg.json do RustDesk)
+          PROJECT_ROOT=$PWD
           
-          # Puxa as atualizações de hoje da Microsoft, forçando a versão mais recente
+          # 2. Navega até a instalação do vcpkg no GitHub Actions e atualiza a engine
+          cd $VCPKG_INSTALLATION_ROOT
           git fetch --all
           git reset --hard origin/master
           ./bootstrap-vcpkg.sh
           
-          # Injeta as variáveis de ambiente necessárias para o compilador do Rust
+          # 3. Retorna para a raiz do seu projeto (O passo crucial que faltou)
+          cd $PROJECT_ROOT
+          
+          # 4. Injeta as variáveis de ambiente necessárias para o Cargo e o VCPKG
           echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
           echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $GITHUB_ENV
           
-          # Executa a instalação lendo o vcpkg.json perfeitamente
-          ./vcpkg install --triplet=x64-windows-static
+          # 5. Executa a instalação. Estando na raiz, ele encontra o vcpkg.json e roda limpo.
+          $VCPKG_INSTALLATION_ROOT/vcpkg install --triplet=x64-windows-static
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

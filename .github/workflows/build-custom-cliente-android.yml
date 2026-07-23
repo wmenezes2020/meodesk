@@ -61,33 +61,41 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Interceptação Global do Gradle (Hook de CI/CD)
+      - name: Forçar Configuração Global do Gradle contra Kotlin 1.4
         shell: bash
         run: |
-          # Cria a infraestrutura global do Gradle na máquina do GitHub Actions
-          mkdir -p ~/.gradle/init.d
+          # Cria o gradle.properties global do projeto para fixar o compilador Kotlin na versão 1.9
+          mkdir -p flutter/android
           
-          # 1. Injeta propriedades fixas de forma global
-          echo "kotlin.version=1.9.24" >> ~/.gradle/gradle.properties
-          echo "ext.kotlin_version=1.9.24" >> ~/.gradle/gradle.properties
-          
-          # 2. Cria o script de interceptação (Init Script)
-          # Isso roda antes do Flutter e de qualquer avaliação de projeto.
-          # Sempre que uma classe de compilação Kotlin for instanciada, sobreescrevemos a versão do SDK em memória.
-          cat << 'EOF' > ~/.gradle/init.d/force-kotlin.gradle
-          gradle.allprojects { project ->
-              project.afterEvaluate {
-                  project.tasks.configureEach { task ->
-                      if (task.getClass().getName().contains("KotlinCompile")) {
-                          task.kotlinOptions.jvmTarget = "1.8"
-                          task.kotlinOptions.languageVersion = "1.9"
-                          task.kotlinOptions.apiVersion = "1.9"
-                      }
+          cat << 'EOF' > flutter/android/gradle.properties
+          org.gradle.jvmargs=-Xmx4G
+          android.useAndroidX=true
+          android.enableJetifier=true
+          kotlin.version=1.9.24
+          ext.kotlin_version=1.9.24
+          EOF
+
+          # Injeta o script de correção diretamente no topo do build.gradle principal do Android do app
+          BUILD_GRADLE="flutter/android/build.gradle"
+          if [ -f "$BUILD_GRADLE" ]; then
+            echo "Injetando regras de rescisão de Kotlin obsoleto em $BUILD_GRADLE"
+            cat << 'EOF' >> "$BUILD_GRADLE"
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+                  kotlinOptions {
+                      jvmTarget = "1.8"
+                      languageVersion = "1.9"
+                      apiVersion = "1.9"
                   }
               }
           }
           EOF
-          echo "[OK] Middleware do Gradle configurado. Compilação blindada."
+          fi
 
       - name: Compilar o Core Rust e o App Android via Flutter
         shell: bash
@@ -97,6 +105,8 @@ jobs:
         run: |
           cd flutter
           flutter pub get
+          
+          # Executa o build do APK limpo
           flutter build apk --release --target-platform android-arm,android-arm64
 
       - name: Empacotar e Disponibilizar o Arquivo .apk
