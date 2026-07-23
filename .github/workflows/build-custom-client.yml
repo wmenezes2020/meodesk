@@ -49,24 +49,22 @@ jobs:
       - name: Configurar VCPKG e Bibliotecas C++ (Codecs de Vídeo)
         shell: bash
         run: |
-          # O runner do GitHub (windows-latest) já possui o vcpkg instalado nesta variável
-          export VCPKG_ROOT="$VCPKG_INSTALLATION_ROOT"
+          # Define o caminho do VCPKG no runner e a arquitetura estática do Windows
           echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+          echo "VCPKG_DEFAULT_TRIPLET=x64-windows-static" >> $GITHUB_ENV
           
-          # Instalação manual e estrita das dependências exigidas pelo RustDesk
-          $VCPKG_INSTALLATION_ROOT/vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
+          # No "Modo Manifesto" (quando existe vcpkg.json), chamamos o install vazio
+          $VCPKG_INSTALLATION_ROOT/vcpkg install --triplet=x64-windows-static
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' 
+          flutter-version: '3.19.0'
           channel: 'stable'
 
       - name: Compilar o Core Backend (Rust)
         shell: bash
-        run: |
-          # Ignoramos o build.py instável e rodamos direto o compilador com as variáveis setadas
-          cargo build --release
+        run: cargo build --release
 
       - name: Compilar a Interface (Flutter)
         shell: bash

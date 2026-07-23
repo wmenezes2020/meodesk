@@ -1,4 +1,4 @@
-name: Build Custom RustDesk Client (Android)
+name: Build Custom MeoDesk Client (Android)
 
 on:
   push:
@@ -31,13 +31,13 @@ jobs:
           
           print(f"Preparando build nativo para o servidor: {ip}")
 
-          # Exporta as variáveis de ambiente oficiais do RustDesk para o runner do GitHub
+          # Exporta as variáveis de ambiente oficiais do RustDesk
           env_file = os.getenv('GITHUB_ENV')
           if env_file:
               with open(env_file, 'a') as f:
                   f.write(f"RENDEZVOUS_SERVER={ip}\n")
                   f.write(f"RS_PUB_KEY={key}\n")
-              print("[OK] Variaveis de ambiente injetadas com sucesso!")
+              print("[OK] Variaveis injetadas com sucesso!")
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -62,15 +62,14 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
           channel: 'stable'
+          # Usamos a versão mais recente do canal stable para garantir o Dart SDK >= 3.5.0
 
       - name: Normalizar Versões do Kotlin e Gradle Globalmente
         shell: python
         run: |
           import os
-          
-          # Garante compatibilidade forçando a versão do Kotlin em todos os build.gradle do projeto Flutter
+          # Atualiza forçosamente as referências antigas do Kotlin nos scripts do Gradle
           for root, dirs, files in os.walk('flutter/android'):
               for file in files:
                   if file.endswith('.gradle') or file.endswith('.gradle.kts'):
@@ -79,15 +78,12 @@ jobs:
                           with open(filepath, 'r', encoding='utf-8') as f:
                               content = f.read()
                           
-                          # Substitui referências antigas de kotlin_version ou versão direta
-                          new_content = content.replace("ext.kotlin_version = '1.4", "ext.kotlin_version = '1.8")
-                          new_content = new_content.replace('ext.kotlin_version = "1.4', 'ext.kotlin_version = "1.8')
-                          new_content = new_content.replace("ext.kotlin_version = '1.5", "ext.kotlin_version = '1.8")
-                          new_content = new_content.replace('ext.kotlin_version = "1.5', 'ext.kotlin_version = "1.8')
-                          new_content = new_content.replace("ext.kotlin_version = '1.6", "ext.kotlin_version = '1.8")
-                          new_content = new_content.replace('ext.kotlin_version = "1.6', 'ext.kotlin_version = "1.8')
+                          new_content = content.replace("ext.kotlin_version = '1.4", "ext.kotlin_version = '1.9")
+                          new_content = new_content.replace('ext.kotlin_version = "1.4', 'ext.kotlin_version = "1.9')
+                          new_content = new_content.replace("ext.kotlin_version = '1.5", "ext.kotlin_version = '1.9")
+                          new_content = new_content.replace("ext.kotlin_version = '1.6", "ext.kotlin_version = '1.9")
+                          new_content = new_content.replace("ext.kotlin_version = '1.7", "ext.kotlin_version = '1.9")
                           
-                          # Adiciona compatibilidade de JVM target se for o build.gradle principal
                           if file == 'build.gradle' and 'subprojects {' not in new_content:
                               new_content += "\nallprojects { tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinOptions { jvmTarget = '1.8' } } }\n"
 
