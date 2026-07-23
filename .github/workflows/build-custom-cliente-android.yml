@@ -5,12 +5,75 @@ on:
     branches:
       - build-custom
 
+env:
+  RUST_VERSION: "1.75"
+  FLUTTER_VERSION: "3.24.5"
+  CARGO_NDK_VERSION: "3.1.2"
+  VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  NDK_VERSION: "r28c"
+  CARGO_EXPAND_VERSION: "1.0.95"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
+
 jobs:
   build-android:
     name: Build Android Client
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: true
+          swap-storage: false
+
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+               clang \
+               cmake \
+               curl \
+               gcc-multilib \
+               git \
+               g++ \
+               g++-multilib \
+               libayatana-appindicator3-dev \
+               libasound2-dev \
+               libc6-dev \
+               libclang-dev \
+               libunwind-dev \
+               libgstreamer1.0-dev \
+               libgstreamer-plugins-base1.0-dev \
+               libgtk-3-dev \
+               libpam0g-dev \
+               libpulse-dev \
+               libva-dev \
+               libxcb-randr0-dev \
+               libxcb-shape0-dev \
+               libxcb-xfixes0-dev \
+               libxdo-dev \
+               libxfixes-dev \
+               llvm-dev \
+               nasm \
+               ninja-build \
+               openjdk-17-jdk-headless \
+               pkg-config \
+               tree \
+               wget
+
       - name: Checkout do Código com Submódulos
         uses: actions/checkout@v4
         with:
@@ -42,76 +105,108 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r26b
+          ndk-version: ${{ env.NDK_VERSION }}
+          add-to-path: true
 
-      - name: Setup Rust para Android
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@v11
         with:
-          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+          vcpkgDirectory: /opt/artifacts/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
 
-      - name: Instalar Ferramentas Cargo (cargo-ndk)
-        run: cargo install cargo-ndk
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-
-      - name: Forçar Configuração Global do Gradle contra Kotlin 1.4
-        shell: bash
-        run: |
-          # Cria o gradle.properties global do projeto para fixar o compilador Kotlin na versão 1.9
-          mkdir -p flutter/android
-          
-          cat << 'EOF' > flutter/android/gradle.properties
-          org.gradle.jvmargs=-Xmx4G
-          android.useAndroidX=true
-          android.enableJetifier=true
-          kotlin.version=1.9.24
-          ext.kotlin_version=1.9.24
-          EOF
-
-          # Injeta o script de correção diretamente no topo do build.gradle principal do Android do app
-          BUILD_GRADLE="flutter/android/build.gradle"
-          if [ -f "$BUILD_GRADLE" ]; then
-            echo "Injetando regras de rescisão de Kotlin obsoleto em $BUILD_GRADLE"
-            cat << 'EOF' >> "$BUILD_GRADLE"
-
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                  kotlinOptions {
-                      jvmTarget = "1.8"
-                      languageVersion = "1.9"
-                      apiVersion = "1.9"
-                  }
-              }
-          }
-          EOF
-          fi
-
-      - name: Compilar o Core Rust e o App Android via Flutter
+      - name: Install vcpkg dependencies (Android arm64)
         shell: bash
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
+          if ! ./flutter/build_android_deps.sh "arm64-v8a"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+              echo ""
+            done
+            exit 1
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: aarch64-linux-android
+          components: "rustfmt"
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: rustdesk-lib-cache-android
+          key: aarch64-linux-android
+
+      - name: Generate flutter-rust-bridge files
+        shell: bash
+        run: |
+          cargo install cargo-expand --version ${{ env.CARGO_EXPAND_VERSION }} --locked
+          cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid" --locked
+          # Downgrade extended_text for Flutter 3.24.5 bridge generation compatibility
+          sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' flutter/pubspec.yaml
+          pushd flutter && flutter pub get && popd
+          ~/.cargo/bin/flutter_rust_bridge_codegen \
+            --rust-input ./src/flutter_ffi.rs \
+            --dart-output ./flutter/lib/generated_bridge.dart \
+            --c-output ./flutter/macos/Runner/bridge_generated.h
+          # Restore extended_text version after bridge generation
+          git checkout flutter/pubspec.yaml
+
+      - name: Compilar Rust lib nativa (cargo-ndk arm64)
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          rustup target add aarch64-linux-android
+          cargo install cargo-ndk --version ${{ env.CARGO_NDK_VERSION }} --locked
+          ./flutter/ndk_arm64.sh
+
+      - name: Compilar o App Android via Flutter
+        shell: bash
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: |
+          export PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH
+
+          # Increase Gradle JVM memory for CI builds
+          sed -i "s/org.gradle.jvmargs=-Xmx1024M/org.gradle.jvmargs=-Xmx2g/g" ./flutter/android/gradle.properties
+
+          # Use debug signing (no keystore in CI)
+          sed -i "s/signingConfigs.release/signingConfigs.debug/g" ./flutter/android/app/build.gradle
+
+          # Copy native libs to jniLibs
+          mkdir -p ./flutter/android/app/src/main/jniLibs/arm64-v8a
+          cp ${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/
+          cp ./target/aarch64-linux-android/release/liblibrustdesk.so ./flutter/android/app/src/main/jniLibs/arm64-v8a/librustdesk.so
+
+          # Build Flutter APK
           cd flutter
           flutter pub get
-          
-          # Executa o build do APK limpo
-          flutter build apk --release --target-platform android-arm,android-arm64
+          flutter build apk --release --target-platform android-arm64 --split-per-abi
 
       - name: Empacotar e Disponibilizar o Arquivo .apk
         uses: actions/upload-artifact@v4
         with:
           name: MeoDesk-Android
-          path: flutter/build/app/outputs/flutter-apk/app-release.apk
+          path: flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 7
