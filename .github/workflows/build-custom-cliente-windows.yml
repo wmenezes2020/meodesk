@@ -57,11 +57,15 @@ jobs:
         with:
           version: ${{ env.LLVM_VERSION }}
 
-      - name: Install flutter
+      - name: Setup flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable"
           flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Apply Customizations
+        run: python scripts/apply_customizations.py
 
       - name: Replace engine with rustdesk custom flutter engine
         run: |

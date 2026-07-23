@@ -105,11 +105,15 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install flutter
+      - name: Setup flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable"
           flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Apply Customizations
+        run: python scripts/apply_customizations.py
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
