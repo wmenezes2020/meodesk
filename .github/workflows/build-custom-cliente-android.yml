@@ -91,7 +91,7 @@ jobs:
           ip = config.get('server_ip', '')
           key = config.get('server_key', '')
           
-          print(f"Preparando build nativo para o servidor: {ip}")
+          print("Preparando build nativo customizado.")
 
           env_file = os.getenv('GITHUB_ENV')
           if env_file:

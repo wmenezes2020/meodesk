@@ -2,6 +2,16 @@ import json
 import os
 import re
 
+
+def replace_required(content, pattern, replacement, target):
+    updated, count = re.subn(pattern, replacement, content)
+    if count != 1:
+        raise RuntimeError(
+            f"Expected to customize {target} exactly once, found {count}."
+        )
+    return updated
+
+
 def main():
     config_path = 'config.json'
     
@@ -16,7 +26,7 @@ def main():
     server_ip = config.get("server_ip", "")
     server_key = config.get("server_key", "")
 
-    print(f"Applying customizations for App: {app_name}, IP: {server_ip}")
+    print(f"Applying customizations for App: {app_name}")
 
     # 1. Modify libs/hbb_common/src/config.rs
     config_rs_path = 'libs/hbb_common/src/config.rs'
@@ -45,16 +55,28 @@ def main():
             content
         )
 
-        # Replace OVERWRITE_SETTINGS to hide server settings and enforce credentials
+        # Replace OVERWRITE_SETTINGS to enforce credentials
         old_overwrite = r'pub static ref OVERWRITE_SETTINGS:\s*RwLock<HashMap<String,\s*String>>\s*=\s*Default::default\(\);'
         new_overwrite = f"""pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = {{
         let mut map = std::collections::HashMap::new();
-        map.insert("hide-server-settings".to_string(), "Y".to_string());
         map.insert("custom-rendezvous-server".to_string(), "{server_ip}".to_string());
         map.insert("key".to_string(), "{server_key}".to_string());
         std::sync::RwLock::new(map)
     }};"""
-        content = re.sub(old_overwrite, new_overwrite, content)
+        content = replace_required(
+            content, old_overwrite, new_overwrite, "OVERWRITE_SETTINGS"
+        )
+
+        # BUILTIN_SETTINGS controls whether Android and Windows render the form.
+        old_builtin = r'pub static ref BUILTIN_SETTINGS:\s*RwLock<HashMap<String,\s*String>>\s*=\s*Default::default\(\);'
+        new_builtin = """pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = std::collections::HashMap::new();
+        map.insert("hide-server-settings".to_string(), "Y".to_string());
+        std::sync::RwLock::new(map)
+    };"""
+        content = replace_required(
+            content, old_builtin, new_builtin, "BUILTIN_SETTINGS"
+        )
 
         with open(config_rs_path, 'w', encoding='utf-8') as f:
             f.write(content)

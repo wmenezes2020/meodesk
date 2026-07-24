@@ -3554,6 +3554,9 @@ class _CountDownButtonState extends State<_CountDownButton> {
   }
 }
 
+bool get isServerSettingsHidden =>
+    bind.mainGetBuildinOption(key: kOptionHideServerSetting) == 'Y';
+
 importConfig(List<TextEditingController>? controllers, List<RxString>? errMsgs,
     String? text) {
   text = text?.trim();
@@ -3589,6 +3592,10 @@ Future<bool> setServerConfig(
   List<RxString>? errMsgs,
   ServerConfig config,
 ) async {
+  if (isServerSettingsHidden) {
+    return false;
+  }
+
   String removeEndSlash(String input) {
     if (input.endsWith('/')) {
       return input.substring(0, input.length - 1);

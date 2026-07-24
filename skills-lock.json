@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "fable-method": {
+      "source": "Sahir619/fable-method",
+      "sourceType": "github",
+      "skillPath": "skills/fable-method/SKILL.md",
+      "computedHash": "b8e28a6280e95943324cf171ac325cdc86d9863f67059b1af5b5aefbb1d2dbc5"
+    }
+  }
+}

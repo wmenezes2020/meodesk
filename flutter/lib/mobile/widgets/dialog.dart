@@ -55,6 +55,10 @@ void setTemporaryPasswordLengthDialog(
 
 void showServerSettings(OverlayDialogManager dialogManager,
     void Function(VoidCallback) setState) async {
+  if (isServerSettingsHidden) {
+    return;
+  }
+
   Map<String, dynamic> options = {};
   try {
     options = jsonDecode(await bind.mainGetOptions());
@@ -69,6 +73,10 @@ void showServerSettingsWithValue(
     ServerConfig serverConfig,
     OverlayDialogManager dialogManager,
     void Function(VoidCallback)? upSetState) async {
+  if (isServerSettingsHidden) {
+    return;
+  }
+
   var isInProgress = false;
   final idCtrl = TextEditingController(text: serverConfig.idServer);
   final relayCtrl = TextEditingController(text: serverConfig.relayServer);
