@@ -30,6 +30,21 @@ the Rust core and platform metadata before the Android and Windows builds run.
 Product values must not be copied into documentation or build output beyond
 what is operationally required.
 
+### Visual Identity
+
+Custom builds ship the MeoDesk mark on every icon and logo surface. Assets are
+generated from the delivered artwork in `images/` by
+`scripts/generate_brand_assets.py` and committed, so no build step depends on
+regenerating them.
+
+- Android: launcher, round launcher, adaptive foreground and notification icons
+  for every density.
+- Windows: the Flutter runner icon, the executable icon used by `build.rs`, the
+  MSI shortcut icon and the tray icon.
+- Shared desktop icon sizes and macOS tray silhouettes follow the same source.
+- In-app logo assets cover the light and dark themes on the desktop home page
+  and the mobile settings page.
+
 ### Managed Server Configuration
 
 Custom builds use an embedded ID server and public server key. These options are
@@ -72,6 +87,9 @@ editable server-settings experience.
 - `server_key`: public key used to validate the managed server.
 - `hide-server-settings`: built-in UI and write policy for managed builds.
 
+Branding artwork lives in `images/`; the generated icon and logo files are the
+committed output of `scripts/generate_brand_assets.py`.
+
 Actual configuration values are intentionally omitted from this document.
 
 ## Non-goals
@@ -95,3 +113,5 @@ Actual configuration values are intentionally omitted from this document.
 
 - 2026-07-24: Specified managed server-setting visibility and write protection
   for custom Android and Windows clients.
+- 2026-07-30: Added the MeoDesk visual identity across Android and Windows icons
+  and the in-app light/dark logo assets.
