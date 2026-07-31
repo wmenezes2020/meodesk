@@ -1,15 +1,15 @@
 [package]
-name = "rustdesk"
+name = "meudesk"
 version = "1.4.9"
-authors = ["rustdesk <info@rustdesk.com>"]
+authors = ["MeuDesk"]
 edition = "2021"
 build= "build.rs"
-description = "RustDesk Remote Desktop"
-default-run = "rustdesk"
+description = "MeuDesk Remote Desktop"
+default-run = "meudesk"
 rust-version = "1.75"
 
 [lib]
-name = "librustdesk"
+name = "libmeudesk"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [[bin]]
@@ -229,8 +229,8 @@ hound = "3.5"
 docopt = "1.1"
 
 [package.metadata.bundle]
-name = "RustDesk"
-identifier = "com.carriez.rustdesk"
+name = "MeuDesk"
+identifier = "com.meudesk.app"
 icon = ["res/32x32.png", "res/128x128.png", "res/128x128@2x.png"]
 osx_minimum_system_version = "10.14"
 

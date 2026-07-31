@@ -7268,7 +7268,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustdesk"
+name = "meudesk"
 version = "1.4.9"
 dependencies = [
  "android-wakelock",

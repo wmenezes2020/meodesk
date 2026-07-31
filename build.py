@@ -14,7 +14,7 @@ from pathlib import Path
 windows = platform.platform().startswith('Windows')
 osx = platform.platform().startswith(
     'Darwin') or platform.platform().startswith("macOS")
-hbb_name = 'rustdesk' + ('.exe' if windows else '')
+hbb_name = 'meudesk' + ('.exe' if windows else '')
 exe_path = 'target/release/' + hbb_name
 if windows:
     win_arch = 'arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x64'
@@ -293,13 +293,12 @@ def generate_control_file(version):
     control_file_path = "../res/DEBIAN/control"
     system2('/bin/rm -rf %s' % control_file_path)
 
-    content = """Package: rustdesk
+    content = """Package: meudesk
 Section: net
 Priority: optional
 Version: %s
 Architecture: %s
-Maintainer: rustdesk <info@rustdesk.com>
-Homepage: https://rustdesk.com
+Maintainer: MeuDesk
 Depends: libgtk-3-0t64 | libgtk-3-0, libxcb-randr0, libxdo3 | libxdo4, libxfixes3, libxcb-shape0, libxcb-xfixes0, libasound2t64 | libasound2, libsystemd0, curl, libva2, libva-drm2, libva-x11-2, libgstreamer-plugins-base1.0-0, libpam0g, gstreamer1.0-pipewire%s
 Recommends: libayatana-appindicator3-1
 Description: A remote control software.
@@ -409,7 +408,7 @@ def build_flutter_dmg(version, features):
             f'MACOSX_DEPLOYMENT_TARGET=10.14 cargo build --locked --features {features} --release')
     # copy dylib
     system2(
-        "cp target/release/liblibrustdesk.dylib target/release/librustdesk.dylib")
+        "cp target/release/liblibmeudesk.dylib target/release/libmeudesk.dylib")
     os.chdir('flutter')
     # cargo builds a single-arch dylib for the host; restrict Xcode to the same arch
     # so the universal-by-default ARCHS_STANDARD doesn't try to link a missing slice.
@@ -432,7 +431,7 @@ def build_flutter_arch_manjaro(version, features):
     ffi_bindgen_function_refactor()
     os.chdir('flutter')
     system2('flutter build linux --release')
-    system2(f'strip {flutter_build_dir}/lib/librustdesk.so')
+    system2(f'strip {flutter_build_dir}/lib/libmeudesk.so')
     os.chdir('../res')
     system2('HBB=`pwd`/.. FLUTTER=1 makepkg -f')
 
@@ -440,7 +439,7 @@ def build_flutter_arch_manjaro(version, features):
 def build_flutter_windows(version, features, skip_portable_pack):
     if not skip_cargo:
         system2(f'cargo build --locked --features {features} --lib --release')
-        if not os.path.exists("target/release/librustdesk.dll"):
+        if not os.path.exists("target/release/libmeudesk.dll"):
             print("cargo build failed, please check rust source code.")
             exit(-1)
     os.chdir('flutter')

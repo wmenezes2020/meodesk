@@ -64,9 +64,11 @@ config is loaded, so the compiled-in value survives.
 
 ## Non-goals
 
-- Renaming crates, the Rust `librustdesk.dll`, Kotlin packages, the Android
-  `applicationId`, code identifiers or tests. These are internal and renaming
-  them risks the build without changing anything a user sees.
+- Kotlin package names, the Android `applicationId` and exported C symbol
+  names. `applicationId` in particular must stay `com.carriez.flutter_hbb`
+  because installations already exist — changing it turns the update into a
+  separate app instead of an upgrade. (The crate, library and binary rename is
+  covered by `docs/SDD_INDEPENDENCE.md`.)
 - Rewriting `https://rustdesk.com` and `github.com/rustdesk` URLs. They must
   keep resolving; the visible link text is already translated.
 - Touching `CompanyName` / `LegalCopyright` in `Runner.rc`. Those name the

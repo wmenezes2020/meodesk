@@ -138,3 +138,6 @@ Actual configuration values are intentionally omitted from this document.
   and the in-app light/dark logo assets.
 - 2026-07-30: Renamed the product from MeoDesk to MeuDesk, removed the upstream
   name from every user-facing surface, and disabled the account/login feature.
+- 2026-07-31: Renamed the crate, native library and binary to MeuDesk, cleaned
+  the build metadata and dropped the upstream git remote. Mirroring the
+  upstream build dependencies remains open.
