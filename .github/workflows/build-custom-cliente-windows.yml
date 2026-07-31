@@ -1,4 +1,4 @@
-name: Build Custom MeoDesk Client (Windows)
+name: Build Custom MeuDesk Client (Windows)
 
 on:
   push:
@@ -136,13 +136,13 @@ jobs:
           # Restore extended_text version after bridge generation
           git checkout flutter/pubspec.yaml
 
-      - name: Compilar MeoDesk (build.py --flutter)
+      - name: Compilar MeuDesk (build.py --flutter)
         run: |
           python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec
 
       - name: Empacotar e Disponibilizar o Arquivo .exe
         uses: actions/upload-artifact@v4
         with:
-          name: MeoDesk-Windows
+          name: MeuDesk-Windows
           path: flutter/build/windows/x64/runner/Release/
           retention-days: 7

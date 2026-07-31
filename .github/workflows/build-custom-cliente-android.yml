@@ -1,4 +1,4 @@
-name: Build Custom MeoDesk Client (Android)
+name: Build Custom MeuDesk Client (Android)
 
 on:
   push:
@@ -211,6 +211,6 @@ jobs:
       - name: Empacotar e Disponibilizar o Arquivo .apk
         uses: actions/upload-artifact@v4
         with:
-          name: MeoDesk-Android
+          name: MeuDesk-Android
           path: flutter/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 7

@@ -1,8 +1,8 @@
-# SDD — MeoDesk branding assets (icons and logos)
+# SDD — MeuDesk branding assets (icons and logos)
 
 ## Problem
 
-Custom Android and Windows builds already carried the MeoDesk product name, but
+Custom Android and Windows builds already carried the MeuDesk product name, but
 every visual asset was still upstream RustDesk artwork: launcher icons, tray
 icons, the Windows `.ico` files and the desktop/mobile in-app logo area. The
 `_Logo` widget in `flutter/lib/common.dart` looks for `assets/logo*.png`, and
@@ -18,7 +18,7 @@ converted into the sizes each platform requires.
 ## Goal
 
 Every icon and logo surface of the Android and Windows clients shows the
-MeoDesk mark, generated deterministically from the delivered artwork.
+MeuDesk mark, generated deterministically from the delivered artwork.
 
 ## Solution
 

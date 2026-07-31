@@ -57,7 +57,7 @@ flutter/lib/generated_plugin_registrant.dart
 libsciter.dylib
 flutter/web/
 
-# MeoDesk branding assets, tracked despite the global *png rule above
+# MeuDesk branding assets, tracked despite the global *png rule above
 !flutter/assets/icon.png
 !flutter/assets/logo.png
 !flutter/assets/logo_light.png

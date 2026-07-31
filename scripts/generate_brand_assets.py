@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate MeoDesk branding assets (app icons and in-app logos).
+"""Generate MeuDesk branding assets (app icons and in-app logos).
 
 Source of truth is ``images/meudesk - fondo transparente.png`` -- the only
 artwork that ships with a real alpha channel, so no background keying (and no

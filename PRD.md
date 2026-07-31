@@ -1,8 +1,8 @@
-# MeoDesk Product Requirements
+# MeuDesk Product Requirements
 
 ## Vision
 
-MeoDesk is a branded remote-support client derived from RustDesk. It provides
+MeuDesk is a branded remote-support client derived from RustDesk. It provides
 remote access on Android and Windows while routing custom distributions through
 the organization's preconfigured infrastructure.
 
@@ -32,7 +32,7 @@ what is operationally required.
 
 ### Visual Identity
 
-Custom builds ship the MeoDesk mark on every icon and logo surface. Assets are
+Custom builds ship the MeuDesk mark on every icon and logo surface. Assets are
 generated from the delivered artwork in `images/` by
 `scripts/generate_brand_assets.py` and committed, so no build step depends on
 regenerating them.
@@ -44,6 +44,25 @@ regenerating them.
 - Shared desktop icon sizes and macOS tray silhouettes follow the same source.
 - In-app logo assets cover the light and dark themes on the desktop home page
   and the mobile settings page.
+
+### Product Naming
+
+The client is presented as MeuDesk everywhere a user can see it: window and tab
+titles, Android launcher and notification entries, the accessibility service,
+Windows file metadata, the executable file name, the deep-link scheme and the
+two-factor issuer shown in authenticator apps.
+
+The upstream RustDesk name is substituted at runtime in every translated string
+by the shared language layer, driven by the configured `app_name`. Internal
+identifiers, package names, the AGPL copyright notice and links to upstream
+documentation are out of scope and keep their original values.
+
+### Account And Login
+
+Custom builds set the `disable-account` hard option. The organization does not
+operate the account service, so the client hides every entry point that depends
+on being signed in: the desktop Account settings tab, the Android Account
+section, the Address Book and Group peer tabs, and the connection-note option.
 
 ### Managed Server Configuration
 
@@ -70,7 +89,7 @@ editable server-settings experience.
 1. A maintainer updates the custom product configuration.
 2. The Android or Windows workflow checks out the repository and submodules.
 3. The customization script embeds branding and managed connection options.
-4. The platform build produces a MeoDesk artifact with restricted server
+4. The platform build produces a MeuDesk artifact with restricted server
    settings hidden.
 
 ### End-User Settings
@@ -86,6 +105,8 @@ editable server-settings experience.
 - `server_ip`: managed rendezvous server address.
 - `server_key`: public key used to validate the managed server.
 - `hide-server-settings`: built-in UI and write policy for managed builds.
+- `hide-powered-by-me`: built-in option that removes the upstream credit.
+- `disable-account`: hard option that removes the account/login feature.
 
 Branding artwork lives in `images/`; the generated icon and logo files are the
 committed output of `scripts/generate_brand_assets.py`.
@@ -113,5 +134,7 @@ Actual configuration values are intentionally omitted from this document.
 
 - 2026-07-24: Specified managed server-setting visibility and write protection
   for custom Android and Windows clients.
-- 2026-07-30: Added the MeoDesk visual identity across Android and Windows icons
+- 2026-07-30: Added the MeuDesk visual identity across Android and Windows icons
   and the in-app light/dark logo assets.
+- 2026-07-30: Renamed the product from MeoDesk to MeuDesk, removed the upstream
+  name from every user-facing surface, and disabled the account/login feature.

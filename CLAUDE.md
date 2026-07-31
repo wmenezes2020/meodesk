@@ -3,7 +3,7 @@ Read and follow `AGENTS.md`.
 Apply `.claude/skills/fable-method/SKILL.md` as a mandatory engineering rule
 for every development task, together with the other repository skills.
 
-## MeoDesk custom builds
+## MeuDesk custom builds
 
 - Android and Windows custom artifacts are built by
   `.github/workflows/build-custom-cliente-*.yml`.
@@ -13,6 +13,20 @@ for every development task, together with the other repository skills.
   hide and block the restricted server form.
 - Keep fixed ID server and public key values in `OVERWRITE_SETTINGS`; do not
   expose their concrete values in documentation or logs.
+- Keep `hide-powered-by-me` in `BUILTIN_SETTINGS` and `disable-account` in
+  `HARD_SETTINGS`; they remove the upstream credit and the account/login feature.
+- `libs/hbb_common` is a git submodule. The script rewrites its `config.rs` at
+  build time, so revert it inside the submodule after any local test run.
+
+## Product name
+
+- `config.json` -> `app_name` is the single source of truth; never hardcode it.
+- `src/lang.rs` already substitutes `RustDesk` with the app name in every
+  translated string, so language files must not be edited for branding.
+- For anything outside that path, read the name at runtime
+  (`crate::get_app_name()`, `bind.mainGetAppNameSync()`, `R.string.app_name`)
+  and fall back to `apply_customizations.py` only for build metadata.
+- Rationale and the out-of-scope list live in `docs/SDD_WHITELABEL_MEUDESK.md`.
 
 ## Branding assets
 

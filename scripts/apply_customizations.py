@@ -22,7 +22,7 @@ def main():
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
 
-    app_name = config.get("app_name", "MeoDesk")
+    app_name = config.get("app_name", "MeuDesk")
     server_ip = config.get("server_ip", "")
     server_key = config.get("server_key", "")
 
@@ -68,14 +68,30 @@ def main():
         )
 
         # BUILTIN_SETTINGS controls whether Android and Windows render the form.
+        # hide-powered-by-me also removes the upstream "Powered by" credit and
+        # the external link that goes with it.
         old_builtin = r'pub static ref BUILTIN_SETTINGS:\s*RwLock<HashMap<String,\s*String>>\s*=\s*Default::default\(\);'
         new_builtin = """pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
         let mut map = std::collections::HashMap::new();
         map.insert("hide-server-settings".to_string(), "Y".to_string());
+        map.insert("hide-powered-by-me".to_string(), "Y".to_string());
         std::sync::RwLock::new(map)
     };"""
         content = replace_required(
             content, old_builtin, new_builtin, "BUILTIN_SETTINGS"
+        )
+
+        # HARD_SETTINGS disables whole features. disable-account removes the
+        # account/login UI on desktop and Android, plus the address book and
+        # group panels that depend on being signed in.
+        old_hard = r'pub static ref HARD_SETTINGS:\s*RwLock<HashMap<String,\s*String>>\s*=\s*Default::default\(\);'
+        new_hard = """pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = std::collections::HashMap::new();
+        map.insert("disable-account".to_string(), "Y".to_string());
+        std::sync::RwLock::new(map)
+    };"""
+        content = replace_required(
+            content, old_hard, new_hard, "HARD_SETTINGS"
         )
 
         with open(config_rs_path, 'w', encoding='utf-8') as f:
@@ -88,9 +104,22 @@ def main():
         with open(android_manifest_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # The accessibility service label is what Android shows under
+        # Settings > Accessibility > Installed services.
+        content = re.sub(
+            r'android:label="RustDesk Input"',
+            f'android:label="{app_name} Input"',
+            content
+        )
         content = re.sub(
             r'android:label="RustDesk"',
             f'android:label="{app_name}"',
+            content
+        )
+        # Must match Rust's get_uri_prefix(), which lowercases APP_NAME.
+        content = re.sub(
+            r'android:scheme="rustdesk"',
+            f'android:scheme="{app_name.lower()}"',
             content
         )
 
@@ -109,6 +138,8 @@ def main():
             f'<string name="app_name">{app_name}</string>',
             content
         )
+        # Shown by Android on the accessibility service consent screen.
+        content = content.replace('RustDesk', app_name)
 
         with open(android_strings_path, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -135,10 +166,36 @@ def main():
             f'VALUE "ProductName", "{app_name}"',
             content
         )
+        # Must track BINARY_NAME below, otherwise Explorer's property sheet
+        # still reports the upstream file name.
+        content = re.sub(
+            r'VALUE "OriginalFilename",\s*".*?"',
+            f'VALUE "OriginalFilename", "{app_name.lower()}.exe"',
+            content
+        )
 
         with open(windows_runner_path, 'w', encoding='utf-8') as f:
             f.write(content)
         print("Updated flutter/windows/runner/Runner.rc")
+
+    # 4. Windows executable name. The workflow ships the raw Release folder,
+    # so the on-disk file name is visible to end users.
+    windows_cmake_path = 'flutter/windows/CMakeLists.txt'
+    if os.path.exists(windows_cmake_path):
+        with open(windows_cmake_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        content = replace_required(
+            content,
+            r'set\(BINARY_NAME "rustdesk"\)',
+            f'set(BINARY_NAME "{app_name.lower()}")',
+            "BINARY_NAME",
+        )
+
+        with open(windows_cmake_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Updated flutter/windows/CMakeLists.txt")
+
 
 if __name__ == "__main__":
     main()
