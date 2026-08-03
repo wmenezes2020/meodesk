@@ -5,8 +5,11 @@ for every development task, together with the other repository skills.
 
 ## MeuDesk custom builds
 
-- Android and Windows custom artifacts are built by
+- Android, Windows and macOS custom artifacts are built by
   `.github/workflows/build-custom-cliente-*.yml`.
+- macOS branding lives in `Configs/AppInfo.xcconfig` (`PRODUCT_NAME`),
+  `Runner/AppIcon.icns` and the `Info.plist` URL scheme; see
+  `docs/SDD_MACOS_BUILD.md`.
 - `scripts/apply_customizations.py` embeds branding and managed connection
   values before compilation.
 - Keep `hide-server-settings` in `BUILTIN_SETTINGS`; Flutter reads that map to

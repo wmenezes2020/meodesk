@@ -122,6 +122,14 @@ def write_png(image, *parts):
     print('wrote', os.path.relpath(path, ROOT))
 
 
+def write_icns(image, *parts):
+    """macOS bundle icon. Pillow emits every standard size up to 512@2x."""
+    path = os.path.join(ROOT, *parts)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    image.save(path, format='ICNS')
+    print('wrote', os.path.relpath(path, ROOT))
+
+
 def write_ico(frames, *parts):
     """Write an .ico where every entry is rendered at its native size."""
     path = os.path.join(ROOT, *parts)
@@ -159,11 +167,10 @@ def main():
 
     # ------------------------------------------------------- shared desktop
     write_png(icon_on_plate(mark, 1024), 'res', 'icon.png')
-    write_png(
-        icon_on_plate(mark, 1024, radius_ratio=MAC_RADIUS_RATIO,
-                      content_ratio=MAC_CONTENT_RATIO),
-        'res', 'mac-icon.png',
-    )
+    mac_icon = icon_on_plate(mark, 1024, radius_ratio=MAC_RADIUS_RATIO,
+                             content_ratio=MAC_CONTENT_RATIO)
+    write_png(mac_icon, 'res', 'mac-icon.png')
+    write_icns(mac_icon, 'flutter', 'macos', 'Runner', 'AppIcon.icns')
     for size, name in ((32, '32x32.png'), (64, '64x64.png'),
                        (128, '128x128.png'), (256, '128x128@2x.png')):
         write_png(icon_on_plate(mark, size), 'res', name)

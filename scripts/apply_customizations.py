@@ -178,6 +178,52 @@ def main():
             f.write(content)
         print("Updated flutter/windows/runner/Runner.rc")
 
+    # 3.5 macOS bundle. PRODUCT_NAME drives the .app name, the window title and
+    # CFBundleName, so this is the macOS equivalent of Runner.rc.
+    macos_appinfo_path = 'flutter/macos/Runner/Configs/AppInfo.xcconfig'
+    if os.path.exists(macos_appinfo_path):
+        with open(macos_appinfo_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        content = replace_required(
+            content,
+            r'PRODUCT_NAME = .*',
+            f'PRODUCT_NAME = {app_name}',
+            "macOS PRODUCT_NAME",
+        )
+        content = replace_required(
+            content,
+            r'PRODUCT_BUNDLE_IDENTIFIER = .*',
+            'PRODUCT_BUNDLE_IDENTIFIER = com.meudesk.app',
+            "macOS bundle identifier",
+        )
+
+        with open(macos_appinfo_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Updated flutter/macos/Runner/Configs/AppInfo.xcconfig")
+
+    # 3.6 macOS deep-link scheme, same constraint as Android: it must match
+    # Rust's get_uri_prefix(), which lowercases APP_NAME.
+    macos_plist_path = 'flutter/macos/Runner/Info.plist'
+    if os.path.exists(macos_plist_path):
+        with open(macos_plist_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        content = replace_required(
+            content,
+            r'<string>rustdesk</string>',
+            f'<string>{app_name.lower()}</string>',
+            "macOS URL scheme",
+        )
+        content = content.replace(
+            '<string>com.carriez.rustdesk</string>',
+            '<string>com.meudesk.app</string>',
+        )
+
+        with open(macos_plist_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Updated flutter/macos/Runner/Info.plist")
+
     # 4. Windows executable name. The workflow ships the raw Release folder,
     # so the on-disk file name is visible to end users.
     windows_cmake_path = 'flutter/windows/CMakeLists.txt'

@@ -3,16 +3,17 @@
 ## Vision
 
 MeuDesk is a branded remote-support client derived from RustDesk. It provides
-remote access on Android and Windows while routing custom distributions through
+remote access on Android, Windows and macOS while routing custom distributions
 the organization's preconfigured infrastructure.
 
 ## Users And Platforms
 
-- End users install the Android or Windows client and receive remote support.
+- End users install the Android, Windows or macOS client and receive remote
+  support.
 - Support operators initiate and manage remote sessions using the capabilities
   inherited from RustDesk.
-- Release maintainers produce branded Android and Windows artifacts through the
-  custom GitHub Actions workflows.
+- Release maintainers produce branded Android, Windows and macOS artifacts
+  through the custom GitHub Actions workflows.
 
 ## Current Product Scope
 
@@ -26,7 +27,7 @@ and the platform-specific permission flows available in this source tree.
 
 The custom build pipeline reads the product name and connection configuration
 from `config.json`. `scripts/apply_customizations.py` applies those values to
-the Rust core and platform metadata before the Android and Windows builds run.
+the Rust core and platform metadata before each platform build runs.
 Product values must not be copied into documentation or build output beyond
 what is operationally required.
 
@@ -41,7 +42,8 @@ regenerating them.
   for every density.
 - Windows: the Flutter runner icon, the executable icon used by `build.rs`, the
   MSI shortcut icon and the tray icon.
-- Shared desktop icon sizes and macOS tray silhouettes follow the same source.
+- macOS: the `.app` bundle icon, plus the shared desktop icon sizes and tray
+  silhouettes, all from the same source.
 - In-app logo assets cover the light and dark themes on the desktop home page
   and the mobile settings page.
 
@@ -71,7 +73,7 @@ fixed by `OVERWRITE_SETTINGS`, so ordinary option writes cannot replace them.
 
 When `hide-server-settings=Y` is present in `BUILTIN_SETTINGS`:
 
-- Android and Windows settings must not display the ID/relay server entry or
+- Settings on every platform must not display the ID/relay server entry or
   its ID server, relay server, API server, and key fields.
 - The shared server dialog must not open from alternate routes such as a
   configuration QR code.
@@ -87,14 +89,15 @@ editable server-settings experience.
 ### Custom Build
 
 1. A maintainer updates the custom product configuration.
-2. The Android or Windows workflow checks out the repository and submodules.
+2. The Android, Windows or macOS workflow checks out the repository and
+   submodules.
 3. The customization script embeds branding and managed connection options.
 4. The platform build produces a MeuDesk artifact with restricted server
    settings hidden.
 
 ### End-User Settings
 
-1. The user opens Settings on Android or Windows.
+1. The user opens Settings on Android, Windows or macOS.
 2. General settings remain available according to existing platform policies.
 3. Managed server fields are absent and cannot be opened or submitted through
    an alternate Flutter route.
@@ -141,3 +144,5 @@ Actual configuration values are intentionally omitted from this document.
 - 2026-07-31: Renamed the crate, native library and binary to MeuDesk, cleaned
   the build metadata and dropped the upstream git remote. Mirroring the
   upstream build dependencies remains open.
+- 2026-07-31: Added the macOS custom client workflow and the macOS branding
+  surfaces (bundle name, icon, deep-link scheme).
