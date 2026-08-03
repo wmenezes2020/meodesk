@@ -17,8 +17,8 @@ The build depends on upstream infrastructure in three structural places:
 3. The Windows workflow downloads a custom Flutter engine from
    `github.com/rustdesk/engine/releases`.
 
-None of these are fixable by editing strings; they require mirroring the
-repositories. That work is tracked separately and is not part of this change.
+None of these are fixable by editing strings. They are resolved by
+`.github/workflows/vendor-upstream-deps.yml`, described below.
 
 ## Legal boundary
 
@@ -74,6 +74,56 @@ would add risk for no visible gain.
 The Linux, macOS, iOS and F-Droid build files were updated in the same pass.
 They are not built by the custom workflows, but leaving them pointing at a
 library name that no longer exists would be a latent break.
+
+## Removing the upstream dependency, inside this repository
+
+Everything stays in this repository: no forks, no second account, no extra
+secret. The default `GITHUB_TOKEN` can write here, which is all that is needed.
+
+### `libs/hbb_common`
+
+Converted from a git submodule into a normal directory. The 32 files are now
+tracked here, `.gitmodules` is gone, and the build no longer clones from
+`github.com/rustdesk/hbb_common`. `submodules: recursive` in the workflows
+became a harmless no-op.
+
+### The 26 crate dependencies
+
+`.github/workflows/vendor-upstream-deps.yml` runs `cargo vendor`, which copies
+only the crates the lock actually uses — a large repository like `wezterm`
+contributes just `portable-pty`. It then:
+
+1. Keeps only the git-sourced crates. Vendored crates.io packages carry a
+   checksum in `.cargo-checksum.json`; git ones have `"package": null`. The
+   registry copies are deleted, so crates.io keeps serving them and the
+   committed tree stays small.
+2. Writes `.cargo/config.toml` from cargo's own emitted config, minus the
+   `[source.crates-io]` block, so only the upstream git sources are redirected.
+3. Fails the run if any `git+` source in `Cargo.lock` has no vendored
+   directory, rather than letting the build quietly reach the network again.
+4. Commits with `git add -f`. The repository-wide `*png` / `*svg` rules would
+   otherwise drop fixtures shipped inside some crates, and cargo verifies every
+   vendored file against its checksum — a missing file breaks the build.
+
+**`Cargo.toml` and `Cargo.lock` are deliberately untouched.** Source
+replacement swaps where cargo reads from without changing what is resolved, so
+`--locked` keeps working and every revision stays pinned exactly where it was.
+Rewriting URLs would have forced a lockfile rewrite as well.
+
+### The Flutter engine
+
+Republished as a release (`engine-mirror`) on this repository. The Windows
+workflow tries `gh release download` first and falls back upstream until the
+mirror exists, so it needed no edit when the mirror appeared and works on a
+private repository too.
+
+### Timing
+
+The vendor job runs alongside the build jobs on the same push. The first run
+still builds against upstream while vendoring happens; from the next push on,
+the builds read from `third_party/vendor`. The vendor commit is pushed with
+`GITHUB_TOKEN`, which by design does not re-trigger workflows, so there is no
+loop.
 
 ## Validation
 

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - build-custom
+  workflow_dispatch:
 
 env:
   RUST_VERSION: "1.75"
@@ -67,11 +68,23 @@ jobs:
       - name: Apply Customizations
         run: python scripts/apply_customizations.py
 
-      - name: Replace engine with rustdesk custom flutter engine
+      - name: Replace engine with the custom flutter engine
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           flutter doctor -v
           flutter precache --windows
-          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          # Prefer our own mirror; fall back upstream until
+          # vendor-upstream-deps has published it. Works for private
+          # repositories too, since gh authenticates the download.
+          gh release download engine-mirror -R $env:GITHUB_REPOSITORY -p windows-x64-release.zip
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Mirror indisponivel, usando o artefato upstream."
+            Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          }
+          # A falha tolerada acima deixaria $LASTEXITCODE != 0 no fim do script,
+          # o que reprovaria o step mesmo com o download alternativo tendo dado certo.
+          $global:LASTEXITCODE = 0
           Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
           $flutter_path = (Get-Command flutter).Source
           $flutter_dir = Split-Path -Path (Split-Path -Path $flutter_path -Parent) -Parent

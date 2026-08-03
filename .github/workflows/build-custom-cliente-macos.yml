@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - build-custom
+  workflow_dispatch:
 
 env:
   # macOS needs 1.81, not the 1.75 used by the Android and Windows workflows:

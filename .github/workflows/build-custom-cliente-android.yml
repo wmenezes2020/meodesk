@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - build-custom
+  workflow_dispatch:
 
 env:
   RUST_VERSION: "1.75"

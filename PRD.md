@@ -146,3 +146,6 @@ Actual configuration values are intentionally omitted from this document.
   upstream build dependencies remains open.
 - 2026-07-31: Added the macOS custom client workflow and the macOS branding
   surfaces (bundle name, icon, deep-link scheme).
+- 2026-07-31: Removed the upstream build dependency inside this repository:
+  `hbb_common` inlined, git crates vendored automatically by an Action, and
+  the Flutter engine republished as a local release.

@@ -18,8 +18,9 @@ for every development task, together with the other repository skills.
   expose their concrete values in documentation or logs.
 - Keep `hide-powered-by-me` in `BUILTIN_SETTINGS` and `disable-account` in
   `HARD_SETTINGS`; they remove the upstream credit and the account/login feature.
-- `libs/hbb_common` is a git submodule. The script rewrites its `config.rs` at
-  build time, so revert it inside the submodule after any local test run.
+- `libs/hbb_common` is a normal in-tree directory, not a submodule. The script
+  rewrites its `config.rs` at build time, so `git checkout` it after any local
+  test run.
 
 ## Product name
 
@@ -43,8 +44,11 @@ for every development task, together with the other repository skills.
   already exist and changing it would break upgrades.
 - The project is AGPL-3.0 and derived from upstream: never remove `LICENCE`,
   the copyright notices, or `CompanyName`/`LegalCopyright` in `Runner.rc`.
-- Build dependencies still come from upstream repositories; see
-  `docs/SDD_INDEPENDENCE.md` for the mirroring that is still open.
+- Upstream git dependencies are vendored into `third_party/vendor` by
+  `.github/workflows/vendor-upstream-deps.yml` and redirected through
+  `.cargo/config.toml`. Never hand-edit either; re-run the workflow.
+- `Cargo.toml` and `Cargo.lock` keep the original upstream URLs on purpose:
+  the swap is source replacement, which is what keeps `--locked` valid.
 
 ## Branding assets
 
