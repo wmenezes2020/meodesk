@@ -67,6 +67,20 @@ The library name is load-bearing on three chains that must stay in sync:
 `Cargo.lock` had to be renamed too — both workflows build with `--locked`, so a
 lock that disagrees with the manifest fails the build outright.
 
+### The bridge class name, which the rename broke
+
+`flutter_rust_bridge_codegen` derives the generated Dart class name from the
+Cargo **package** name when `--class-name` is not given. Renaming the package
+therefore renamed `RustdeskImpl` to something else, and every Dart file that
+referenced it failed with `Type 'RustdeskImpl' not found` — followed by dozens
+of cascading type errors, because `bind` lost its type and degraded to
+`dynamic` everywhere it was used. All three platforms failed identically.
+
+The fix passes `--class-name MeuDesk` explicitly in the three workflows and
+renames the references to `MeuDeskImpl`, including the hand-written web stub in
+`flutter/lib/web/bridge.dart`. The generated code no longer depends on the
+crate name at all, so a future rename cannot reintroduce this.
+
 Exported C symbols (`rustdesk_core_main_args`, `get_rustdesk_app_name`) keep
 their names. They are private to the runner/library boundary and renaming them
 would add risk for no visible gain.
@@ -131,5 +145,8 @@ loop.
 - The load chains above were traced end to end and checked for consistency.
 - Compilation is verified by the two custom workflows on push to
   `build-custom`; no Rust or Flutter toolchain exists locally.
-- The riskiest item is the `Cargo.lock` rename. If CI fails on `--locked`,
-  regenerate the lock with `cargo generate-lockfile` and commit it.
+- The `Cargo.lock` rename passed: all three builds got through the Rust
+  compilation and failed later, in the Dart phase.
+- `--class-name` was confirmed to exist in flutter_rust_bridge 1.80.1 before
+  being relied on (`frb_codegen/src/config/raw_opts.rs`), and its fallback is
+  indeed derived from the crate directory.
