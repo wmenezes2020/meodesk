@@ -129,40 +129,32 @@ jobs:
           vendor_dir = os.environ["VENDOR_DIR"]
           text = open("Cargo.lock", encoding="utf-8").read()
 
-          # Only rustdesk-org sources are in scope: those are the ones this
-          # repository must stop depending on. Other third-party git forks
-          # (madsmtm, bjornsnoen, clslaid) belong to unrelated maintainers and
-          # keep being fetched normally.
-          #
-          # cargo vendor resolves with default features, so optional
-          # dependencies such as x11-clipboard (unix-file-copy-paste) and the
-          # [patch.crates-io] entries are not vendored. That is reported but
-          # does not fail the run.
-          missing_upstream, missing_other = [], []
+          # cargo vendor names a directory after the crate, but falls back to
+          # "<name>-<version>" when several versions of the same crate are in
+          # the graph. Matching only the bare name reports crates as missing
+          # when they are in fact vendored.
+          entries = set(os.listdir(vendor_dir))
+
+          missing = []
           for block in text.split("[[package]]"):
               name = re.search(r'^name = "(.+?)"', block, re.M)
+              version = re.search(r'^version = "(.+?)"', block, re.M)
               source = re.search(r'^source = "git\+(.+?)"', block, re.M)
               if not name or not source:
                   continue
-              if os.path.isdir(os.path.join(vendor_dir, name.group(1))):
+              candidates = {name.group(1)}
+              if version:
+                  candidates.add(f"{name.group(1)}-{version.group(1)}")
+              if candidates & entries:
                   continue
-              entry = f"{name.group(1)}  <-  {source.group(1)}"
-              if "rustdesk-org/" in source.group(1) or "rustdesk/" in source.group(1):
-                  missing_upstream.append(entry)
-              else:
-                  missing_other.append(entry)
+              missing.append(f"{name.group(1)}  <-  {source.group(1)}")
 
-          if missing_other:
-              print("Fontes git de terceiros que seguem vindo da rede:")
-              for item in missing_other:
-                  print("  " + item)
-
-          if missing_upstream:
-              print("::error::fontes upstream sem diretório vendorizado:")
-              for item in missing_upstream:
+          if missing:
+              print("::error::fontes git sem diretório vendorizado:")
+              for item in missing:
                   print("  " + item)
               sys.exit(1)
-          print("Todas as fontes upstream estão vendorizadas.")
+          print("Todas as fontes git do Cargo.lock estão vendorizadas.")
           PY
 
       # ---------------------------------------------------------------- commit

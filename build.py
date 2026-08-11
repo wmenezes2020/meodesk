@@ -404,15 +404,17 @@ def build_deb_from_folder(version, binary_folder):
 def get_macos_product_name():
     # PRODUCT_NAME is rewritten by scripts/apply_customizations.py, so the
     # bundle name must be read back instead of hardcoded.
-    path = 'flutter/macos/Runner/Configs/AppInfo.xcconfig'
-    try:
-        with open(path, encoding='utf-8') as fh:
-            for line in fh:
-                if line.strip().startswith('PRODUCT_NAME'):
-                    return line.split('=', 1)[1].strip()
-    except FileNotFoundError:
-        pass
-    return 'RustDesk'
+    # Resolved from the repository root, because this is also called after
+    # chdir('flutter'). No silent fallback: a wrong name here only shows up as
+    # a confusing `cp` failure much later.
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        'flutter', 'macos', 'Runner', 'Configs',
+                        'AppInfo.xcconfig')
+    with open(path, encoding='utf-8') as fh:
+        for line in fh:
+            if line.strip().startswith('PRODUCT_NAME'):
+                return line.split('=', 1)[1].strip()
+    raise RuntimeError(f'PRODUCT_NAME not found in {path}')
 
 
 def build_flutter_dmg(version, features):

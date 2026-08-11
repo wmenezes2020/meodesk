@@ -101,7 +101,7 @@ tracked here, `.gitmodules` is gone, and the build no longer clones from
 `github.com/rustdesk/hbb_common`. `submodules: recursive` in the workflows
 became a harmless no-op.
 
-### The 26 crate dependencies
+### The git crate dependencies
 
 `.github/workflows/vendor-upstream-deps.yml` runs `cargo vendor`, which copies
 only the crates the lock actually uses — a large repository like `wezterm`
@@ -115,9 +115,17 @@ contributes just `portable-pty`. It then:
    `[source.crates-io]` block, so only the upstream git sources are redirected.
 3. Fails the run if any `git+` source in `Cargo.lock` has no vendored
    directory, rather than letting the build quietly reach the network again.
+   The directory is matched as `<name>` *or* `<name>-<version>`: cargo falls
+   back to the versioned form when several versions of a crate are in the
+   graph, and matching only the bare name reported vendored crates as missing.
 4. Commits with `git add -f`. The repository-wide `*png` / `*svg` rules would
    otherwise drop fixtures shipped inside some crates, and cargo verifies every
    vendored file against its checksum — a missing file breaks the build.
+
+Result: **44 crates, 28 MB, 33 git sources replaced** — every `git+` source in
+`Cargo.lock`, not just the upstream ones. Vendoring produced 2.7 GB before the
+crates.io copies were pruned. Nothing in the build reaches a git host any more;
+only crates.io is still contacted.
 
 **`Cargo.toml` and `Cargo.lock` are deliberately untouched.** Source
 replacement swaps where cargo reads from without changing what is resolved, so
@@ -145,6 +153,13 @@ loop.
 - The load chains above were traced end to end and checked for consistency.
 - Compilation is verified by the two custom workflows on push to
   `build-custom`; no Rust or Flutter toolchain exists locally.
+- Android, Windows and the vendor workflow are green. macOS built
+  `MeuDesk.app` (58 MB) and then failed on `build.py` copying the `service`
+  binary into `RustDesk.app`: `get_macos_product_name()` resolved its path
+  relative to the CWD, which `build_flutter_dmg` had already changed to
+  `flutter/`, so the silent fallback returned the upstream name. The path is
+  now anchored to the script's own location and the fallback was removed — a
+  wrong name must fail loudly instead of surfacing as a confusing `cp` error.
 - The `Cargo.lock` rename passed: all three builds got through the Rust
   compilation and failed later, in the Dart phase.
 - `--class-name` was confirmed to exist in flutter_rust_bridge 1.80.1 before
