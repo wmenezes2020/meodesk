@@ -44,9 +44,14 @@ for every development task, together with the other repository skills.
   already exist and changing it would break upgrades.
 - The project is AGPL-3.0 and derived from upstream: never remove `LICENCE`,
   the copyright notices, or `CompanyName`/`LegalCopyright` in `Runner.rc`.
+- `.cargo/config.toml` is versioned and load-bearing: `crt-static` for every
+  Windows target, the macOS `__CGPreLoginApp` link arg and `git-fetch-with-cli`.
+  Dropping `crt-static` makes the Windows link fail with LNK2038 against the
+  static vcpkg libraries. Never overwrite the file; append only.
 - Upstream git dependencies are vendored into `third_party/vendor` by
-  `.github/workflows/vendor-upstream-deps.yml` and redirected through
-  `.cargo/config.toml`. Never hand-edit either; re-run the workflow.
+  `.github/workflows/vendor-upstream-deps.yml`, which appends its source
+  replacement between sentinel comments in `.cargo/config.toml`. Never
+  hand-edit the vendored tree; re-run the workflow.
 - `Cargo.toml` and `Cargo.lock` keep the original upstream URLs on purpose:
   the swap is source replacement, which is what keeps `--locked` valid.
 

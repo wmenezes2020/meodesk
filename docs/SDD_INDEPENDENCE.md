@@ -111,8 +111,14 @@ contributes just `portable-pty`. It then:
    checksum in `.cargo-checksum.json`; git ones have `"package": null`. The
    registry copies are deleted, so crates.io keeps serving them and the
    committed tree stays small.
-2. Writes `.cargo/config.toml` from cargo's own emitted config, minus the
-   `[source.crates-io]` block, so only the upstream git sources are redirected.
+2. **Appends** cargo's own emitted config, minus the `[source.crates-io]`
+   block, between sentinel comments in `.cargo/config.toml`. That file is
+   versioned and carries `crt-static` for the Windows targets, the macOS
+   `__CGPreLoginApp` link arg and `git-fetch-with-cli`. The first version of
+   this workflow overwrote it, which dropped `crt-static` and made the Windows
+   link fail with a wall of `LNK2038 mismatch detected for 'RuntimeLibrary'`
+   against the static vcpkg libraries. Only the sentinel region is rewritten
+   on re-runs.
 3. Fails the run if any `git+` source in `Cargo.lock` has no vendored
    directory, rather than letting the build quietly reach the network again.
    The directory is matched as `<name>` *or* `<name>-<version>`: cargo falls
