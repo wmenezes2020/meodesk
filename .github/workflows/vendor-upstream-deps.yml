@@ -168,6 +168,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # -f: the repository-wide *png / *svg rules would drop test fixtures
           # shipped inside some crates.
+          # .gitattributes must keep `third_party/vendor/** -text`: cargo
+          # checks every vendored file against the sha256 in
+          # .cargo-checksum.json, and the repo's `* text=auto` would rewrite
+          # line endings and break the build with "checksum has changed".
           git add -f .cargo/config.toml "$VENDOR_DIR"
           if git diff --cached --quiet; then
             echo "Nada a commitar."

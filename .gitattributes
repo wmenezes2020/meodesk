@@ -1,1 +1,6 @@
 * text=auto
+
+# Cargo confere cada arquivo vendorizado contra o sha256 em
+# .cargo-checksum.json. A normalizacao de fim de linha do text=auto acima
+# altera os bytes e quebra o build com "the listed checksum has changed".
+third_party/vendor/** -text -diff

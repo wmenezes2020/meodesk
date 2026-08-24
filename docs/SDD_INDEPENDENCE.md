@@ -122,6 +122,13 @@ contributes just `portable-pty`. It then:
    otherwise drop fixtures shipped inside some crates, and cargo verifies every
    vendored file against its checksum — a missing file breaks the build.
 
+`.gitattributes` carries `third_party/vendor/** -text`, overriding the
+repository-wide `* text=auto`. Without it git normalises line endings on
+commit, the bytes stop matching `.cargo-checksum.json`, and every build dies
+on `the listed checksum of ... has changed`. That is exactly how the first
+vendored build failed, on `sysinfo/md_doc/sid.md`. It only reproduces on
+Linux: a Windows checkout converts LF back to CRLF and happens to match again.
+
 Result: **44 crates, 28 MB, 33 git sources replaced** — every `git+` source in
 `Cargo.lock`, not just the upstream ones. Vendoring produced 2.7 GB before the
 crates.io copies were pruned. Nothing in the build reaches a git host any more;
