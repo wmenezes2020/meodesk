@@ -59,3 +59,13 @@ for every development task, together with the other repository skills.
 - `.gitignore` ignores `*png`, so `flutter/assets/{icon,logo,logo_light,logo_dark}.png`
   are explicitly re-included; keep those negations when editing `.gitignore`.
 - Rationale and the full asset map live in `docs/SDD_BRANDING_ASSETS.md`.
+
+## Domain and upstream URL references
+
+- User-facing links point to `https://meudesk.com`; the EULA link on the
+  install page points at the domain root.
+- Three `rustdesk.com` occurrences are intentional and must not be rebranded:
+  `is_public()` in `src/common.rs` (matching our own domain there would flip
+  the public-server behaviour), the update endpoint in `libs/hbb_common`
+  (unreachable because `check_software_update` returns early for custom
+  clients), and the `websocket.rs` / `socket_client.rs` test fixtures.
