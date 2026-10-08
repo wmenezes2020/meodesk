@@ -74,3 +74,24 @@ for every development task, together with the other repository skills.
   the public-server behaviour), the update endpoint in `libs/hbb_common`
   (unreachable because `check_software_update` returns early for custom
   clients), and the `websocket.rs` / `socket_client.rs` test fixtures.
+
+<!-- graphify-regra-de-ouro -->
+## Grafo do graphify (REGRA DE OURO, propagada do global)
+
+**PASSO ZERO de toda tarefa: consultar o grafo ANTES de escrever o SDD e
+ANTES de tocar no PRD.** `graphify.exe query`, `explain` e `path` dizem onde
+o assunto mora e o que se liga a ele. Nao e recurso para quando travar: e a
+primeira coisa. Sem isso o SDD nasce de suposicao e o PRD descreve recurso
+que talvez ja exista com outro nome.
+
+**Repositorio sem `graphify-out/`: gerar o grafo antes de comecar.** Sobre
+`src/` (ou equivalente), nunca na pasta que agrupa varios repositorios, que
+costuma ter anotacao, captura e material de cliente. E passagem AST local,
+sem token.
+
+**`graphify-out/` NAO entra na limpeza de disco.** Fica no `.gitignore`, mas
+nao e descartavel: `node_modules` volta com um comando, o grafo nao volta
+sozinho. Faltando espaco, apagar `graphify-out/cache/` antes do grafo.
+
+**Ler o arquivo continua obrigatorio para EDITAR.** O grafo diz onde olhar;
+nao substitui o trecho que vai mudar nem o teste que prova a mudanca.
